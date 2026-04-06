@@ -58,7 +58,7 @@ export default function OrderDetails() {
     const lines = [
       `Customer / الزبون: ${order.customerName}`,
       `Phone / الهاتف: ${order.phone}`,
-      `Service / الخدمة: ${SERVICE_LABELS[order.serviceType]}`,
+      `Service / الخدمة: ${getServiceLabel(order.serviceType)}`,
       `Description / التفاصيل: ${order.description}`,
       `Total Price / الإجمالي: ${order.totalPrice} NIS`,
       `Paid / المدفوع: ${order.paidAmount} NIS`,
