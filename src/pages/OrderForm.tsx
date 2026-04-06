@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { addOrder, getOrder, updateOrder } from '@/lib/store';
-import { ServiceType, OrderStatus, SERVICE_LABELS, STATUS_LABELS } from '@/lib/types';
+import { OrderStatus, STATUS_LABELS } from '@/lib/types';
+import { getServices } from '@/lib/services';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { Settings } from 'lucide-react';
 
 export default function OrderForm() {
   const navigate = useNavigate();
