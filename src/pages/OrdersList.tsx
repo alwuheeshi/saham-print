@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getOrders, deleteOrder, updateOrder } from '@/lib/store';
-import { Order, STATUS_LABELS, SERVICE_LABELS, OrderStatus } from '@/lib/types';
+import { Order, STATUS_LABELS, OrderStatus } from '@/lib/types';
+import { getServiceLabel } from '@/lib/services';
 import { OrderStatusBadge, PaymentStatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -60,7 +61,7 @@ export default function OrdersList() {
                   className={`border-b hover:bg-muted/30 transition-colors ${order.remainingAmount > 0 ? 'bg-destructive/5' : ''}`}
                 >
                   <td className="p-3 font-medium">{order.customerName}</td>
-                  <td className="p-3">{SERVICE_LABELS[order.serviceType]}</td>
+                  <td className="p-3">{getServiceLabel(order.serviceType)}</td>
                   <td className="p-3">{order.totalPrice.toLocaleString()} ₪</td>
                   <td className="p-3">{order.paidAmount.toLocaleString()} ₪</td>
                   <td className="p-3 font-semibold">{order.remainingAmount > 0 ? `${order.remainingAmount.toLocaleString()} ₪` : '—'}</td>

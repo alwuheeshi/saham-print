@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { addOrder, getOrder, updateOrder } from '@/lib/store';
-import { ServiceType, OrderStatus, SERVICE_LABELS, STATUS_LABELS } from '@/lib/types';
+import { OrderStatus, STATUS_LABELS } from '@/lib/types';
+import { getServices } from '@/lib/services';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { Settings } from 'lucide-react';
 
 export default function OrderForm() {
   const navigate = useNavigate();
@@ -17,7 +19,7 @@ export default function OrderForm() {
   const [form, setForm] = useState({
     customerName: '',
     phone: '',
-    serviceType: 'printing' as ServiceType,
+    serviceType: 'printing' as string,
     description: '',
     totalPrice: 0,
     deposit: 0,
@@ -75,12 +77,17 @@ export default function OrderForm() {
         </div>
 
         <div>
-          <Label>نوع الخدمة</Label>
-          <Select value={form.serviceType} onValueChange={v => setForm(f => ({ ...f, serviceType: v as ServiceType }))}>
+          <div className="flex items-center justify-between mb-1">
+            <Label>نوع الخدمة</Label>
+            <Link to="/services" className="text-xs text-primary hover:underline flex items-center gap-1">
+              <Settings className="w-3 h-3" />إدارة الخدمات
+            </Link>
+          </div>
+          <Select value={form.serviceType} onValueChange={v => setForm(f => ({ ...f, serviceType: v }))}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              {Object.entries(SERVICE_LABELS).map(([k, v]) => (
-                <SelectItem key={k} value={k}>{v}</SelectItem>
+              {getServices().map(s => (
+                <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>

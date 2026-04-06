@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getOrder, addPayment } from '@/lib/store';
-import { Order, SERVICE_LABELS, STATUS_LABELS } from '@/lib/types';
+import { Order, STATUS_LABELS } from '@/lib/types';
+import { getServiceLabel } from '@/lib/services';
 import { OrderStatusBadge, PaymentStatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,7 +58,7 @@ export default function OrderDetails() {
     const lines = [
       `Customer / الزبون: ${order.customerName}`,
       `Phone / الهاتف: ${order.phone}`,
-      `Service / الخدمة: ${SERVICE_LABELS[order.serviceType]}`,
+      `Service / الخدمة: ${getServiceLabel(order.serviceType)}`,
       `Description / التفاصيل: ${order.description}`,
       `Total Price / الإجمالي: ${order.totalPrice} NIS`,
       `Paid / المدفوع: ${order.paidAmount} NIS`,
@@ -98,7 +99,7 @@ export default function OrderDetails() {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div><span className="text-muted-foreground">الزبون:</span> <span className="font-semibold">{order.customerName}</span></div>
             <div><span className="text-muted-foreground">الهاتف:</span> <span className="font-semibold">{order.phone}</span></div>
-            <div><span className="text-muted-foreground">الخدمة:</span> <span className="font-semibold">{SERVICE_LABELS[order.serviceType]}</span></div>
+            <div><span className="text-muted-foreground">الخدمة:</span> <span className="font-semibold">{getServiceLabel(order.serviceType)}</span></div>
             <div><span className="text-muted-foreground">التسليم:</span> <span className="font-semibold">{order.deliveryDate || '—'}</span></div>
           </div>
 

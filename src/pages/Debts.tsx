@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getOrders } from '@/lib/store';
-import { Order, SERVICE_LABELS } from '@/lib/types';
+import { Order } from '@/lib/types';
+import { getServiceLabel } from '@/lib/services';
 import { PaymentStatusBadge } from '@/components/StatusBadge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -59,7 +60,7 @@ export default function Debts() {
                 <tr key={order.id} className="border-b hover:bg-muted/30">
                   <td className="p-3 font-medium">{order.customerName}</td>
                   <td className="p-3">{order.phone}</td>
-                  <td className="p-3">{SERVICE_LABELS[order.serviceType]}</td>
+                  <td className="p-3">{getServiceLabel(order.serviceType)}</td>
                   <td className="p-3">{order.totalPrice.toLocaleString()} ₪</td>
                   <td className="p-3">{order.paidAmount.toLocaleString()} ₪</td>
                   <td className="p-3 font-semibold text-destructive">{order.remainingAmount.toLocaleString()} ₪</td>
