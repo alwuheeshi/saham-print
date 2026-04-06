@@ -77,12 +77,17 @@ export default function OrderForm() {
         </div>
 
         <div>
-          <Label>نوع الخدمة</Label>
-          <Select value={form.serviceType} onValueChange={v => setForm(f => ({ ...f, serviceType: v as ServiceType }))}>
+          <div className="flex items-center justify-between mb-1">
+            <Label>نوع الخدمة</Label>
+            <Link to="/services" className="text-xs text-primary hover:underline flex items-center gap-1">
+              <Settings className="w-3 h-3" />إدارة الخدمات
+            </Link>
+          </div>
+          <Select value={form.serviceType} onValueChange={v => setForm(f => ({ ...f, serviceType: v }))}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              {Object.entries(SERVICE_LABELS).map(([k, v]) => (
-                <SelectItem key={k} value={k}>{v}</SelectItem>
+              {getServices().map(s => (
+                <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>

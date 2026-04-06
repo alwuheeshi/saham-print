@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getOrder, addPayment } from '@/lib/store';
-import { Order, SERVICE_LABELS, STATUS_LABELS } from '@/lib/types';
+import { Order, STATUS_LABELS } from '@/lib/types';
+import { getServiceLabel } from '@/lib/services';
 import { OrderStatusBadge, PaymentStatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
