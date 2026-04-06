@@ -99,7 +99,7 @@ export default function OrderDetails() {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div><span className="text-muted-foreground">الزبون:</span> <span className="font-semibold">{order.customerName}</span></div>
             <div><span className="text-muted-foreground">الهاتف:</span> <span className="font-semibold">{order.phone}</span></div>
-            <div><span className="text-muted-foreground">الخدمة:</span> <span className="font-semibold">{SERVICE_LABELS[order.serviceType]}</span></div>
+            <div><span className="text-muted-foreground">الخدمة:</span> <span className="font-semibold">{getServiceLabel(order.serviceType)}</span></div>
             <div><span className="text-muted-foreground">التسليم:</span> <span className="font-semibold">{order.deliveryDate || '—'}</span></div>
           </div>
 

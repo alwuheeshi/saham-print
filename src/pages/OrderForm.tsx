@@ -19,7 +19,7 @@ export default function OrderForm() {
   const [form, setForm] = useState({
     customerName: '',
     phone: '',
-    serviceType: 'printing' as ServiceType,
+    serviceType: 'printing' as string,
     description: '',
     totalPrice: 0,
     deposit: 0,
