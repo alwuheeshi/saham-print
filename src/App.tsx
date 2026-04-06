@@ -9,6 +9,7 @@ import OrderForm from "@/pages/OrderForm";
 import OrderDetails from "@/pages/OrderDetails";
 import Debts from "@/pages/Debts";
 import ServicesSettings from "@/pages/ServicesSettings";
+import ChangePassword from "@/pages/ChangePassword";
 import NotFound from "@/pages/NotFound";
 import LoginPage, { isAuthenticated } from "@/pages/LoginPage";
 
