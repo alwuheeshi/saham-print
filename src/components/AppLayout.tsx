@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ClipboardList, PlusCircle, AlertTriangle, Printer } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, PlusCircle, AlertTriangle } from 'lucide-react';
+import logo from '@/assets/logo.jpg';
 
 const navItems = [
   { to: '/', label: 'لوحة التحكم', icon: LayoutDashboard },
