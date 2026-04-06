@@ -24,7 +24,8 @@ export default function LoginPage() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === DEFAULT_USER && password === DEFAULT_PASS) {
+    const creds = getCredentials();
+    if (username === creds.username && password === creds.password) {
       localStorage.setItem(AUTH_KEY, 'true');
       window.location.reload();
     } else {
