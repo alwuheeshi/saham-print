@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ClipboardList, PlusCircle, AlertTriangle, LogOut } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, PlusCircle, AlertTriangle, LogOut, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { logout } from '@/pages/LoginPage';
 import logo from '@/assets/logo.jpg';
