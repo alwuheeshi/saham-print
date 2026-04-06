@@ -9,6 +9,7 @@ import OrderForm from "@/pages/OrderForm";
 import OrderDetails from "@/pages/OrderDetails";
 import Debts from "@/pages/Debts";
 import ServicesSettings from "@/pages/ServicesSettings";
+import ChangePassword from "@/pages/ChangePassword";
 import NotFound from "@/pages/NotFound";
 import LoginPage, { isAuthenticated } from "@/pages/LoginPage";
 
@@ -40,6 +41,7 @@ const App = () => {
               <Route path="/orders/:id/edit" element={<OrderForm />} />
               <Route path="/debts" element={<Debts />} />
               <Route path="/services" element={<ServicesSettings />} />
+              <Route path="/change-password" element={<ChangePassword />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AppLayout>

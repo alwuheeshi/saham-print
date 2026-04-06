@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ClipboardList, PlusCircle, AlertTriangle, LogOut } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, PlusCircle, AlertTriangle, LogOut, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { logout } from '@/pages/LoginPage';
 import logo from '@/assets/logo.jpg';
@@ -26,10 +26,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <p className="text-xs opacity-80">SAHAM - نظام إدارة المطبعة</p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={logout} className="text-primary-foreground hover:bg-primary-foreground/10">
-            <LogOut className="w-4 h-4 ml-1" />
-            خروج
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link to="/change-password">
+              <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10">
+                <Lock className="w-4 h-4 ml-1" />
+                كلمة المرور
+              </Button>
+            </Link>
+            <Button variant="ghost" size="sm" onClick={logout} className="text-primary-foreground hover:bg-primary-foreground/10">
+              <LogOut className="w-4 h-4 ml-1" />
+              خروج
+            </Button>
+          </div>
         </div>
       </header>
 
