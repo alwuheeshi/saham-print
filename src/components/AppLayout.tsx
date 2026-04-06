@@ -16,9 +16,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="bg-primary text-primary-foreground shadow-lg no-print">
-        <div className="container mx-auto px-4 py-4 flex items-center gap-3">
-          <Printer className="w-7 h-7" />
-          <h1 className="text-xl font-bold">نظام إدارة المطبعة</h1>
+        <div className="container mx-auto px-4 py-3 flex items-center gap-3">
+          <img src={logo} alt="شعار السهم" className="w-10 h-10 rounded-md object-contain bg-primary-foreground p-0.5" />
+          <div>
+            <h1 className="text-lg font-bold leading-tight">السهم للدعاية والإعلان</h1>
+            <p className="text-xs opacity-80">SAHAM - نظام إدارة المطبعة</p>
+          </div>
         </div>
       </header>
 
