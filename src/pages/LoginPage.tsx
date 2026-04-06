@@ -5,10 +5,9 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { LogIn } from 'lucide-react';
 import logo from '@/assets/logo.jpg';
+import { getCredentials } from './ChangePassword';
 
 const AUTH_KEY = 'printshop_auth';
-const DEFAULT_USER = 'admin';
-const DEFAULT_PASS = 'admin123';
 
 export function isAuthenticated(): boolean {
   return localStorage.getItem(AUTH_KEY) === 'true';
