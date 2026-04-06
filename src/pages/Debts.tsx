@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getOrders } from '@/lib/store';
-import { Order, SERVICE_LABELS } from '@/lib/types';
+import { Order } from '@/lib/types';
+import { getServiceLabel } from '@/lib/services';
 import { PaymentStatusBadge } from '@/components/StatusBadge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
