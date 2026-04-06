@@ -1,4 +1,4 @@
-export type ServiceType = 'printing' | 'tshirts' | 'banners' | 'cups' | 'stickers' | 'cards' | 'other';
+export type ServiceType = string;
 export type OrderStatus = 'new' | 'in_progress' | 'done' | 'delivered';
 export type PaymentStatus = 'unpaid' | 'partially_paid' | 'paid';
 

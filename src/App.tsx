@@ -26,6 +26,7 @@ const App = () => (
             <Route path="/orders/:id" element={<OrderDetails />} />
             <Route path="/orders/:id/edit" element={<OrderForm />} />
             <Route path="/debts" element={<Debts />} />
+            <Route path="/services" element={<ServicesSettings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AppLayout>
