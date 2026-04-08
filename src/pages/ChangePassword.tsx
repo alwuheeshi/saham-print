@@ -19,6 +19,8 @@ export function saveCredentials(creds: { username: string; password: string }) {
 }
 
 export default function ChangePassword() {
+  const creds = getCredentials();
+  const [newUsername, setNewUsername] = useState(creds.username);
   const [currentPass, setCurrentPass] = useState('');
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
@@ -31,20 +33,27 @@ export default function ChangePassword() {
       toast.error('كلمة المرور الحالية غير صحيحة');
       return;
     }
-    if (newPass.length < 4) {
+    if (!newUsername.trim()) {
+      toast.error('اسم المستخدم لا يمكن أن يكون فارغاً');
+      return;
+    }
+    if (newPass && newPass.length < 4) {
       toast.error('كلمة المرور الجديدة يجب أن تكون 4 أحرف على الأقل');
       return;
     }
-    if (newPass !== confirmPass) {
+    if (newPass && newPass !== confirmPass) {
       toast.error('كلمة المرور الجديدة غير متطابقة');
       return;
     }
 
-    saveCredentials({ ...creds, password: newPass });
+    saveCredentials({
+      username: newUsername.trim(),
+      password: newPass || creds.password,
+    });
     setCurrentPass('');
     setNewPass('');
     setConfirmPass('');
-    toast.success('تم تغيير كلمة المرور بنجاح');
+    toast.success('تم حفظ التغييرات بنجاح');
   };
 
   return (
@@ -53,7 +62,7 @@ export default function ChangePassword() {
         <Link to="/">
           <Button variant="ghost" size="icon"><ArrowRight className="w-5 h-5" /></Button>
         </Link>
-        <h2 className="text-2xl font-bold">تغيير كلمة المرور</h2>
+        <h2 className="text-2xl font-bold">إعدادات الحساب</h2>
       </div>
 
       <form onSubmit={handleSubmit} className="bg-card border rounded-lg p-6 shadow-sm space-y-4">
@@ -64,11 +73,15 @@ export default function ChangePassword() {
         </div>
 
         <div>
-          <Label>كلمة المرور الحالية</Label>
+          <Label>اسم المستخدم</Label>
+          <Input value={newUsername} onChange={e => setNewUsername(e.target.value)} />
+        </div>
+        <div>
+          <Label>كلمة المرور الحالية <span className="text-destructive">*</span></Label>
           <Input type="password" value={currentPass} onChange={e => setCurrentPass(e.target.value)} />
         </div>
         <div>
-          <Label>كلمة المرور الجديدة</Label>
+          <Label>كلمة المرور الجديدة <span className="text-xs text-muted-foreground">(اتركه فارغاً للإبقاء على الحالية)</span></Label>
           <Input type="password" value={newPass} onChange={e => setNewPass(e.target.value)} />
         </div>
         <div>
@@ -76,7 +89,7 @@ export default function ChangePassword() {
           <Input type="password" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} />
         </div>
 
-        <Button type="submit" className="w-full">حفظ كلمة المرور</Button>
+        <Button type="submit" className="w-full">حفظ التغييرات</Button>
       </form>
     </div>
   );
