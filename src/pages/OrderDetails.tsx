@@ -60,9 +60,9 @@ export default function OrderDetails() {
       `Phone / الهاتف: ${order.phone}`,
       `Service / الخدمة: ${getServiceLabel(order.serviceType)}`,
       `Description / التفاصيل: ${order.description}`,
-      `Total Price / الإجمالي: ${order.totalPrice} NIS`,
-      `Paid / المدفوع: ${order.paidAmount} NIS`,
-      `Remaining / المتبقي: ${order.remainingAmount} NIS`,
+      `Total Price / الإجمالي: ${order.totalPrice} LYD`,
+      `Paid / المدفوع: ${order.paidAmount} LYD`,
+      `Remaining / المتبقي: ${order.remainingAmount} LYD`,
       `Delivery Date / التسليم: ${order.deliveryDate}`,
       `Status / الحالة: ${STATUS_LABELS[order.status]}`,
     ];
@@ -117,16 +117,16 @@ export default function OrderDetails() {
           <div className="border-t pt-4 grid grid-cols-3 gap-4 text-center">
             <div>
               <p className="text-muted-foreground text-xs">الإجمالي</p>
-              <p className="text-lg font-bold">{order.totalPrice.toLocaleString()} ₪</p>
+              <p className="text-lg font-bold">{order.totalPrice.toLocaleString()} د.ل</p>
             </div>
             <div>
               <p className="text-muted-foreground text-xs">المدفوع</p>
-              <p className="text-lg font-bold text-success">{order.paidAmount.toLocaleString()} ₪</p>
+              <p className="text-lg font-bold text-success">{order.paidAmount.toLocaleString()} د.ل</p>
             </div>
             <div>
               <p className="text-muted-foreground text-xs">المتبقي</p>
               <p className={`text-lg font-bold ${order.remainingAmount > 0 ? 'text-destructive' : ''}`}>
-                {order.remainingAmount.toLocaleString()} ₪
+                {order.remainingAmount.toLocaleString()} د.ل
               </p>
             </div>
           </div>
@@ -139,7 +139,7 @@ export default function OrderDetails() {
                 {order.payments.map(p => (
                   <div key={p.id} className="flex justify-between text-sm bg-muted/50 rounded px-3 py-1.5">
                     <span>{p.note || 'دفعة'}</span>
-                    <span className="font-semibold">{p.amount.toLocaleString()} ₪</span>
+                    <span className="font-semibold">{p.amount.toLocaleString()} د.ل</span>
                   </div>
                 ))}
               </div>
@@ -159,7 +159,7 @@ export default function OrderDetails() {
                   <DialogTitle>إضافة دفعة جديدة</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 pt-2">
-                  <div className="text-sm text-muted-foreground">المتبقي: {order.remainingAmount.toLocaleString()} ₪</div>
+                  <div className="text-sm text-muted-foreground">المتبقي: {order.remainingAmount.toLocaleString()} د.ل</div>
                   <div>
                     <Label>المبلغ</Label>
                     <Input type="number" min={0} max={order.remainingAmount} value={payAmount} onChange={e => setPayAmount(Number(e.target.value))} />

@@ -195,7 +195,7 @@ export default function OrderForm() {
         {!isEdit && form.totalPrice > 0 && (
           <div className="bg-muted rounded-lg p-3 text-sm">
             <span className="text-muted-foreground">المتبقي بعد العربون: </span>
-            <span className="font-bold">{(form.totalPrice - form.deposit).toLocaleString()} ₪</span>
+            <span className="font-bold">{(form.totalPrice - form.deposit).toLocaleString()} د.ل</span>
           </div>
         )}
 

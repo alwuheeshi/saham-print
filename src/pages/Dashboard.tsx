@@ -130,8 +130,8 @@ export default function Dashboard() {
         <StatCard icon={Clock} label="قيد التنفيذ" value={inProgress} color="bg-warning/10 text-warning" />
         <StatCard icon={CheckCircle} label="جاهزة" value={done} color="bg-success/10 text-success" />
         <StatCard icon={Ban} label="طلبات غير مدفوعة" value={unpaidCount} color="bg-destructive/10 text-destructive" />
-        <StatCard icon={AlertTriangle} label="إجمالي الديون" value={`${totalDebts.toLocaleString()} ₪`} color="bg-destructive/10 text-destructive" />
-        <StatCard icon={DollarSign} label="إجمالي المبيعات" value={`${totalSales.toLocaleString()} ₪`} color="bg-success/10 text-success" />
+        <StatCard icon={AlertTriangle} label="إجمالي الديون" value={`${totalDebts.toLocaleString()} د.ل`} color="bg-destructive/10 text-destructive" />
+        <StatCard icon={DollarSign} label="إجمالي المبيعات" value={`${totalSales.toLocaleString()} د.ل`} color="bg-success/10 text-success" />
       </div>
     </div>
   );

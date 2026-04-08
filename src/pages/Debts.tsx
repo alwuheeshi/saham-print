@@ -34,7 +34,7 @@ export default function Debts() {
           className="max-w-sm"
         />
         <div className="bg-destructive/10 text-destructive px-4 py-2 rounded-lg font-semibold text-sm">
-          إجمالي الديون: {totalDebt.toLocaleString()} ₪
+          إجمالي الديون: {totalDebt.toLocaleString()} د.ل
         </div>
       </div>
 
@@ -61,9 +61,9 @@ export default function Debts() {
                   <td className="p-3 font-medium">{order.customerName}</td>
                   <td className="p-3">{order.phone}</td>
                   <td className="p-3">{getServiceLabel(order.serviceType)}</td>
-                  <td className="p-3">{order.totalPrice.toLocaleString()} ₪</td>
-                  <td className="p-3">{order.paidAmount.toLocaleString()} ₪</td>
-                  <td className="p-3 font-semibold text-destructive">{order.remainingAmount.toLocaleString()} ₪</td>
+                  <td className="p-3">{order.totalPrice.toLocaleString()} د.ل</td>
+                  <td className="p-3">{order.paidAmount.toLocaleString()} د.ل</td>
+                  <td className="p-3 font-semibold text-destructive">{order.remainingAmount.toLocaleString()} د.ل</td>
                   <td className="p-3"><PaymentStatusBadge status={order.paymentStatus} /></td>
                   <td className="p-3">
                     <Link to={`/orders/${order.id}`}>
