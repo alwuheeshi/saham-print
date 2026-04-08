@@ -90,9 +90,9 @@ export default function OrdersList() {
                 >
                   <td className="p-3 font-medium">{order.customerName}</td>
                   <td className="p-3">{getServiceLabel(order.serviceType)}</td>
-                  <td className="p-3">{order.totalPrice.toLocaleString()} ₪</td>
-                  <td className="p-3">{order.paidAmount.toLocaleString()} ₪</td>
-                  <td className="p-3 font-semibold">{order.remainingAmount > 0 ? `${order.remainingAmount.toLocaleString()} ₪` : '—'}</td>
+                  <td className="p-3">{order.totalPrice.toLocaleString()} د.ل</td>
+                  <td className="p-3">{order.paidAmount.toLocaleString()} د.ل</td>
+                  <td className="p-3 font-semibold">{order.remainingAmount > 0 ? `${order.remainingAmount.toLocaleString()} د.ل` : '—'}</td>
                   <td className="p-3"><PaymentStatusBadge status={order.paymentStatus} /></td>
                   <td className="p-3">
                     <Select value={order.status} onValueChange={v => handleStatusChange(order.id, v as OrderStatus)}>
