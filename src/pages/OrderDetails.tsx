@@ -60,9 +60,9 @@ export default function OrderDetails() {
       `Phone / الهاتف: ${order.phone}`,
       `Service / الخدمة: ${getServiceLabel(order.serviceType)}`,
       `Description / التفاصيل: ${order.description}`,
-      `Total Price / الإجمالي: ${order.totalPrice} NIS`,
-      `Paid / المدفوع: ${order.paidAmount} NIS`,
-      `Remaining / المتبقي: ${order.remainingAmount} NIS`,
+      `Total Price / الإجمالي: ${order.totalPrice} LYD`,
+      `Paid / المدفوع: ${order.paidAmount} LYD`,
+      `Remaining / المتبقي: ${order.remainingAmount} LYD`,
       `Delivery Date / التسليم: ${order.deliveryDate}`,
       `Status / الحالة: ${STATUS_LABELS[order.status]}`,
     ];
