@@ -29,6 +29,28 @@ export default function OrdersList() {
     reload();
   };
 
+  const handleExportExcel = () => {
+    if (orders.length === 0) return toast.error('لا توجد طلبات للتصدير');
+    const data = orders.map(o => ({
+      'الزبون': o.customerName,
+      'الهاتف': o.phone,
+      'الخدمة': getServiceLabel(o.serviceType),
+      'التفاصيل': o.description,
+      'الإجمالي': o.totalPrice,
+      'المدفوع': o.paidAmount,
+      'المتبقي': o.remainingAmount,
+      'حالة الدفع': PAYMENT_STATUS_LABELS[o.paymentStatus],
+      'الحالة': STATUS_LABELS[o.status],
+      'تاريخ التسليم': o.deliveryDate,
+      'تاريخ الإنشاء': new Date(o.createdAt).toLocaleDateString('ar'),
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'الطلبات');
+    XLSX.writeFile(wb, `orders-${new Date().toISOString().slice(0,10)}.xlsx`);
+    toast.success('تم تصدير الملف بنجاح');
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
