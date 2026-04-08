@@ -1,9 +1,17 @@
 import { Order, Payment, PaymentStatus } from './types';
 
 const STORAGE_KEY = 'printshop_orders';
+const ORDER_NUMBER_KEY = 'printshop_order_number';
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+}
+
+function getNextOrderNumber(): number {
+  const current = localStorage.getItem(ORDER_NUMBER_KEY);
+  const next = current ? parseInt(current) + 1 : 1001;
+  localStorage.setItem(ORDER_NUMBER_KEY, next.toString());
+  return next;
 }
 
 function calcPaymentStatus(totalPrice: number, paidAmount: number): PaymentStatus {
@@ -21,12 +29,13 @@ function saveOrders(orders: Order[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
 }
 
-export function addOrder(input: Omit<Order, 'id' | 'paidAmount' | 'remainingAmount' | 'paymentStatus' | 'payments' | 'createdAt'>): Order {
+export function addOrder(input: Omit<Order, 'id' | 'orderNumber' | 'paidAmount' | 'remainingAmount' | 'paymentStatus' | 'payments' | 'createdAt'>): Order {
   const paidAmount = input.deposit || 0;
   const remainingAmount = input.totalPrice - paidAmount;
   const order: Order = {
     ...input,
     id: generateId(),
+    orderNumber: getNextOrderNumber(),
     payments: paidAmount > 0 ? [{ id: generateId(), amount: paidAmount, date: new Date().toISOString(), note: 'عربون' }] : [],
     paidAmount,
     remainingAmount,
@@ -44,7 +53,6 @@ export function updateOrder(id: string, updates: Partial<Order>): Order | null {
   const idx = orders.findIndex(o => o.id === id);
   if (idx === -1) return null;
   const order = { ...orders[idx], ...updates };
-  // recalc
   order.paidAmount = order.payments.reduce((s: number, p: Payment) => s + p.amount, 0);
   order.remainingAmount = order.totalPrice - order.paidAmount;
   order.paymentStatus = calcPaymentStatus(order.totalPrice, order.paidAmount);
@@ -74,4 +82,34 @@ export function deleteOrder(id: string) {
 
 export function getOrder(id: string): Order | undefined {
   return getOrders().find(o => o.id === id);
+}
+
+export function searchOrders(query: string): Order[] {
+  const q = query.toLowerCase();
+  return getOrders().filter(o =>
+    o.customerName.toLowerCase().includes(q) ||
+    o.phone.includes(q) ||
+    o.orderNumber?.toString().includes(q) ||
+    o.id.includes(q)
+  );
+}
+
+export function exportBackup(): string {
+  const data = {
+    orders: localStorage.getItem(STORAGE_KEY),
+    customers: localStorage.getItem('printshop_customers'),
+    services: localStorage.getItem('printshop_services'),
+    orderNumber: localStorage.getItem(ORDER_NUMBER_KEY),
+    credentials: localStorage.getItem('printshop_credentials'),
+  };
+  return JSON.stringify(data);
+}
+
+export function importBackup(json: string) {
+  const data = JSON.parse(json);
+  if (data.orders) localStorage.setItem(STORAGE_KEY, data.orders);
+  if (data.customers) localStorage.setItem('printshop_customers', data.customers);
+  if (data.services) localStorage.setItem('printshop_services', data.services);
+  if (data.orderNumber) localStorage.setItem(ORDER_NUMBER_KEY, data.orderNumber);
+  if (data.credentials) localStorage.setItem('printshop_credentials', data.credentials);
 }

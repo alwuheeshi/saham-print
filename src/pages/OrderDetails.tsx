@@ -44,22 +44,26 @@ export default function OrderDetails() {
   };
 
   const handleExportPDF = async () => {
-    // Dynamic import to avoid loading jspdf on every page
     const { default: jsPDF } = await import('jspdf');
-    
     const doc = new jsPDF({ putOnlyUsedFonts: true });
     
-    // Simple text-based PDF since Arabic font support needs special handling
     doc.setFontSize(18);
     doc.text('Work Order / أمر عمل', 105, 20, { align: 'center' });
     
     doc.setFontSize(12);
     let y = 40;
     const lines = [
+      `Order # / رقم الطلب: ${order.orderNumber || order.id}`,
       `Customer / الزبون: ${order.customerName}`,
       `Phone / الهاتف: ${order.phone}`,
       `Service / الخدمة: ${getServiceLabel(order.serviceType)}`,
       `Description / التفاصيل: ${order.description}`,
+      ...(order.dimensions ? [`Dimensions / المقاسات: ${order.dimensions}`] : []),
+      ...(order.quantity ? [`Quantity / الكمية: ${order.quantity}`] : []),
+      ...(order.notes ? [`Notes / ملاحظات: ${order.notes}`] : []),
+      ...(order.assignedDesigner ? [`Designer / المصمم: ${order.assignedDesigner}`] : []),
+      ...(order.assignedPrinter ? [`Printer / الطابع: ${order.assignedPrinter}`] : []),
+      ...(order.assignedInstaller ? [`Installer / المركّب: ${order.assignedInstaller}`] : []),
       `Total Price / الإجمالي: ${order.totalPrice} LYD`,
       `Paid / المدفوع: ${order.paidAmount} LYD`,
       `Remaining / المتبقي: ${order.remainingAmount} LYD`,
@@ -72,13 +76,12 @@ export default function OrderDetails() {
       y += 10;
     });
     
-    doc.save(`order-${order.id}.pdf`);
+    doc.save(`order-${order.orderNumber || order.id}.pdf`);
     toast.success('تم تصدير PDF');
   };
 
   return (
     <div>
-      {/* Printable area */}
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-6 no-print">
           <h2 className="text-2xl font-bold">تفاصيل الطلب</h2>
@@ -89,11 +92,10 @@ export default function OrderDetails() {
           </div>
         </div>
 
-        {/* Work order card */}
         <div className="bg-card border rounded-lg p-6 shadow-sm space-y-4">
           <div className="text-center border-b pb-4">
             <h3 className="text-xl font-bold">أمر عمل</h3>
-            <p className="text-muted-foreground text-sm">رقم: {order.id}</p>
+            <p className="text-muted-foreground text-sm">رقم الطلب: {order.orderNumber || order.id}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-4 text-sm">
@@ -101,6 +103,8 @@ export default function OrderDetails() {
             <div><span className="text-muted-foreground">الهاتف:</span> <span className="font-semibold">{order.phone}</span></div>
             <div><span className="text-muted-foreground">الخدمة:</span> <span className="font-semibold">{getServiceLabel(order.serviceType)}</span></div>
             <div><span className="text-muted-foreground">التسليم:</span> <span className="font-semibold">{order.deliveryDate || '—'}</span></div>
+            {order.dimensions && <div><span className="text-muted-foreground">المقاسات:</span> <span className="font-semibold">{order.dimensions}</span></div>}
+            {order.quantity && <div><span className="text-muted-foreground">الكمية:</span> <span className="font-semibold">{order.quantity}</span></div>}
           </div>
 
           <div className="text-sm">
@@ -108,12 +112,27 @@ export default function OrderDetails() {
             <p className="mt-1 bg-muted rounded p-3">{order.description || '—'}</p>
           </div>
 
+          {order.notes && (
+            <div className="text-sm">
+              <span className="text-muted-foreground">ملاحظات:</span>
+              <p className="mt-1 bg-muted rounded p-3">{order.notes}</p>
+            </div>
+          )}
+
+          {/* Employees */}
+          {(order.assignedDesigner || order.assignedPrinter || order.assignedInstaller) && (
+            <div className="grid grid-cols-3 gap-3 text-sm border-t pt-3">
+              {order.assignedDesigner && <div><span className="text-muted-foreground text-xs block">المصمم</span><span className="font-semibold">{order.assignedDesigner}</span></div>}
+              {order.assignedPrinter && <div><span className="text-muted-foreground text-xs block">الطابع</span><span className="font-semibold">{order.assignedPrinter}</span></div>}
+              {order.assignedInstaller && <div><span className="text-muted-foreground text-xs block">المركّب</span><span className="font-semibold">{order.assignedInstaller}</span></div>}
+            </div>
+          )}
+
           <div className="flex gap-2">
             <OrderStatusBadge status={order.status} />
             <PaymentStatusBadge status={order.paymentStatus} />
           </div>
 
-          {/* Payment summary */}
           <div className="border-t pt-4 grid grid-cols-3 gap-4 text-center">
             <div>
               <p className="text-muted-foreground text-xs">الإجمالي</p>
@@ -131,7 +150,6 @@ export default function OrderDetails() {
             </div>
           </div>
 
-          {/* Payments history */}
           {order.payments.length > 0 && (
             <div className="border-t pt-4">
               <h4 className="font-semibold mb-2 text-sm">سجل الدفعات</h4>
@@ -147,7 +165,6 @@ export default function OrderDetails() {
           )}
         </div>
 
-        {/* Add payment button */}
         {order.remainingAmount > 0 && (
           <div className="mt-4 no-print">
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

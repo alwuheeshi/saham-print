@@ -1,14 +1,13 @@
 import { useEffect, useState, useMemo } from 'react';
 import { getOrders } from '@/lib/store';
-import { Order } from '@/lib/types';
-import { ClipboardList, Clock, CheckCircle, AlertTriangle, DollarSign, Ban, CalendarIcon } from 'lucide-react';
+import { Order, STATUS_LABELS, OrderStatus } from '@/lib/types';
+import { ClipboardList, Clock, CheckCircle, AlertTriangle, DollarSign, Ban, CalendarIcon, Palette, Printer } from 'lucide-react';
 import { startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
-import { ar } from 'date-fns/locale';
 
 type Period = 'month' | 'year' | 'custom';
 
@@ -50,7 +49,7 @@ export default function Dashboard() {
     } else {
       if (!customFrom || !customTo) return allOrders;
       start = customFrom;
-      end = customTo;
+      end = new Date(customTo);
       end.setHours(23, 59, 59, 999);
     }
 
@@ -61,7 +60,8 @@ export default function Dashboard() {
   }, [allOrders, period, customFrom, customTo]);
 
   const total = orders.length;
-  const inProgress = orders.filter(o => o.status === 'in_progress').length;
+  const activeStatuses: OrderStatus[] = ['designing', 'design_done', 'printing', 'cutting', 'installing'];
+  const inProgress = orders.filter(o => activeStatuses.includes(o.status)).length;
   const done = orders.filter(o => o.status === 'done').length;
   const unpaidCount = orders.filter(o => o.paymentStatus !== 'paid').length;
   const totalDebts = orders.reduce((s, o) => s + o.remainingAmount, 0);
