@@ -1,5 +1,5 @@
 export type ServiceType = string;
-export type OrderStatus = 'new' | 'in_progress' | 'done' | 'delivered';
+export type OrderStatus = 'new' | 'designing' | 'design_done' | 'printing' | 'cutting' | 'installing' | 'done' | 'delivered';
 export type PaymentStatus = 'unpaid' | 'partially_paid' | 'paid';
 
 export interface Payment {
@@ -11,10 +11,17 @@ export interface Payment {
 
 export interface Order {
   id: string;
+  orderNumber: number;
   customerName: string;
   phone: string;
   serviceType: ServiceType;
   description: string;
+  dimensions?: string;
+  quantity?: number;
+  notes?: string;
+  assignedDesigner?: string;
+  assignedPrinter?: string;
+  assignedInstaller?: string;
   totalPrice: number;
   deposit: number;
   payments: Payment[];
@@ -38,7 +45,11 @@ export const SERVICE_LABELS: Record<ServiceType, string> = {
 
 export const STATUS_LABELS: Record<OrderStatus, string> = {
   new: 'جديد',
-  in_progress: 'قيد التنفيذ',
+  designing: 'قيد التصميم',
+  design_done: 'انتهى التصميم',
+  printing: 'قيد الطباعة',
+  cutting: 'قيد القص',
+  installing: 'قيد التركيب',
   done: 'جاهز',
   delivered: 'تم التسليم',
 };
