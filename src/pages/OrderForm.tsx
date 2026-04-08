@@ -1,15 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { addOrder, getOrder, updateOrder } from '@/lib/store';
 import { OrderStatus, STATUS_LABELS } from '@/lib/types';
 import { getServices } from '@/lib/services';
+import { getCustomers, ensureCustomerExists, Customer } from '@/lib/customers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from 'sonner';
-import { Settings } from 'lucide-react';
+import { Settings, Users, Search } from 'lucide-react';
 
 export default function OrderForm() {
   const navigate = useNavigate();
@@ -26,6 +28,16 @@ export default function OrderForm() {
     deliveryDate: '',
     status: 'new' as OrderStatus,
   });
+
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [showCustomers, setShowCustomers] = useState(false);
+  const customers = useMemo(() => getCustomers(), []);
+
+  const filteredCustomers = useMemo(() => {
+    if (!customerSearch.trim()) return customers;
+    const q = customerSearch.toLowerCase();
+    return customers.filter(c => c.name.toLowerCase().includes(q) || c.phone.includes(q));
+  }, [customers, customerSearch]);
 
   useEffect(() => {
     if (id) {
@@ -45,12 +57,21 @@ export default function OrderForm() {
     }
   }, [id]);
 
+  const selectCustomer = (c: Customer) => {
+    setForm(f => ({ ...f, customerName: c.name, phone: c.phone }));
+    setShowCustomers(false);
+    setCustomerSearch('');
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.customerName || !form.phone) {
       toast.error('يرجى ملء الحقول المطلوبة');
       return;
     }
+    // Save customer for future use
+    ensureCustomerExists(form.customerName, form.phone);
+
     if (isEdit) {
       updateOrder(id!, { ...form });
       toast.success('تم تعديل الطلب بنجاح');
@@ -67,7 +88,47 @@ export default function OrderForm() {
       <form onSubmit={handleSubmit} className="bg-card border rounded-lg p-6 space-y-4 shadow-sm">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <Label>اسم الزبون *</Label>
+            <div className="flex items-center justify-between mb-1">
+              <Label>اسم الزبون *</Label>
+              {customers.length > 0 && (
+                <Popover open={showCustomers} onOpenChange={setShowCustomers}>
+                  <PopoverTrigger asChild>
+                    <Button type="button" variant="ghost" size="sm" className="h-6 text-xs text-primary gap-1 px-2">
+                      <Users className="w-3 h-3" />
+                      اختيار زبون
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72 p-2" align="start">
+                    <div className="relative mb-2">
+                      <Search className="absolute right-2 top-2.5 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        placeholder="بحث بالاسم أو الهاتف..."
+                        value={customerSearch}
+                        onChange={e => setCustomerSearch(e.target.value)}
+                        className="pr-8 h-9 text-sm"
+                      />
+                    </div>
+                    <div className="max-h-48 overflow-y-auto space-y-0.5">
+                      {filteredCustomers.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-3">لا توجد نتائج</p>
+                      ) : (
+                        filteredCustomers.map(c => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => selectCustomer(c)}
+                            className="w-full text-right px-3 py-2 rounded-md hover:bg-accent text-sm transition-colors"
+                          >
+                            <div className="font-medium">{c.name}</div>
+                            <div className="text-xs text-muted-foreground">{c.phone}</div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
+            </div>
             <Input value={form.customerName} onChange={e => setForm(f => ({ ...f, customerName: e.target.value }))} />
           </div>
           <div>
