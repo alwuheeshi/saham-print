@@ -55,9 +55,14 @@ export default function OrdersList() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold">الطلبات</h2>
-        <Link to="/orders/new">
-          <Button>+ طلب جديد</Button>
-        </Link>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportExcel}>
+            <FileSpreadsheet className="w-4 h-4 ml-2" />تصدير Excel
+          </Button>
+          <Link to="/orders/new">
+            <Button>+ طلب جديد</Button>
+          </Link>
+        </div>
       </div>
 
       {orders.length === 0 ? (
