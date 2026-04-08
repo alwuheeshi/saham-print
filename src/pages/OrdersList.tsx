@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getOrders, deleteOrder, updateOrder } from '@/lib/store';
-import { Order, STATUS_LABELS, OrderStatus } from '@/lib/types';
+import { Order, STATUS_LABELS, PAYMENT_STATUS_LABELS, OrderStatus } from '@/lib/types';
 import { getServiceLabel } from '@/lib/services';
 import { OrderStatusBadge, PaymentStatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2, Edit, Eye } from 'lucide-react';
+import { Trash2, Edit, Eye, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
 
 export default function OrdersList() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -28,13 +29,40 @@ export default function OrdersList() {
     reload();
   };
 
+  const handleExportExcel = () => {
+    if (orders.length === 0) return toast.error('لا توجد طلبات للتصدير');
+    const data = orders.map(o => ({
+      'الزبون': o.customerName,
+      'الهاتف': o.phone,
+      'الخدمة': getServiceLabel(o.serviceType),
+      'التفاصيل': o.description,
+      'الإجمالي': o.totalPrice,
+      'المدفوع': o.paidAmount,
+      'المتبقي': o.remainingAmount,
+      'حالة الدفع': PAYMENT_STATUS_LABELS[o.paymentStatus],
+      'الحالة': STATUS_LABELS[o.status],
+      'تاريخ التسليم': o.deliveryDate,
+      'تاريخ الإنشاء': new Date(o.createdAt).toLocaleDateString('ar'),
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'الطلبات');
+    XLSX.writeFile(wb, `orders-${new Date().toISOString().slice(0,10)}.xlsx`);
+    toast.success('تم تصدير الملف بنجاح');
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold">الطلبات</h2>
-        <Link to="/orders/new">
-          <Button>+ طلب جديد</Button>
-        </Link>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportExcel}>
+            <FileSpreadsheet className="w-4 h-4 ml-2" />تصدير Excel
+          </Button>
+          <Link to="/orders/new">
+            <Button>+ طلب جديد</Button>
+          </Link>
+        </div>
       </div>
 
       {orders.length === 0 ? (
