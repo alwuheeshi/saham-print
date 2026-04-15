@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Printer, FileDown, Plus, Edit } from 'lucide-react';
+import { Printer, FileDown, Plus, Edit, FileText } from 'lucide-react';
 
 export default function OrderDetails() {
   const { id } = useParams();
@@ -89,6 +89,8 @@ export default function OrderDetails() {
             <Button variant="outline" onClick={handlePrint}><Printer className="w-4 h-4 ml-2" />طباعة</Button>
             <Button variant="outline" onClick={handleExportPDF}><FileDown className="w-4 h-4 ml-2" />PDF</Button>
             <Link to={`/orders/${order.id}/edit`}><Button variant="outline"><Edit className="w-4 h-4 ml-2" />تعديل</Button></Link>
+            <Link to={`/orders/${order.id}/invoice?type=preliminary`}><Button variant="outline"><FileText className="w-4 h-4 ml-2" />فاتورة مبدئية</Button></Link>
+            <Link to={`/orders/${order.id}/invoice?type=final`}><Button variant="outline"><FileText className="w-4 h-4 ml-2" />فاتورة نهائية</Button></Link>
           </div>
         </div>
 
