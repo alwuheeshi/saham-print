@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ClipboardList, PlusCircle, AlertTriangle, LogOut, Lock, Users, Database, Settings } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, PlusCircle, AlertTriangle, LogOut, Lock, Users, Database, Settings, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { logout } from '@/pages/LoginPage';
 import logo from '@/assets/logo.jpg';
@@ -10,6 +10,7 @@ const navItems = [
   { to: '/orders/new', label: 'طلب جديد', icon: PlusCircle },
   { to: '/customers', label: 'العملاء', icon: Users },
   { to: '/debts', label: 'الديون', icon: AlertTriangle },
+  { to: '/reports', label: 'التقارير', icon: BarChart3 },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
