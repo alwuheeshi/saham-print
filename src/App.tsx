@@ -12,6 +12,7 @@ import Debts from "@/pages/Debts";
 import CustomersPage from "@/pages/CustomersPage";
 import ServicesSettings from "@/pages/ServicesSettings";
 import BackupPage from "@/pages/BackupPage";
+import ReportsPage from "@/pages/ReportsPage";
 import ChangePassword from "@/pages/ChangePassword";
 import NotFound from "@/pages/NotFound";
 import LoginPage, { isAuthenticated } from "@/pages/LoginPage";
@@ -45,6 +46,7 @@ const App = () => {
               <Route path="/orders/:id/invoice" element={<InvoicePage />} />
               <Route path="/customers" element={<CustomersPage />} />
               <Route path="/debts" element={<Debts />} />
+              <Route path="/reports" element={<ReportsPage />} />
               <Route path="/services" element={<ServicesSettings />} />
               <Route path="/backup" element={<BackupPage />} />
               <Route path="/change-password" element={<ChangePassword />} />
