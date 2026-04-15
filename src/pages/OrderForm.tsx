@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { addOrder, getOrder, updateOrder } from '@/lib/store';
-import { OrderStatus, STATUS_LABELS } from '@/lib/types';
-import { getServices } from '@/lib/services';
+import { Order, OrderStatus, STATUS_LABELS } from '@/lib/types';
+import { getServices, getServiceLabel } from '@/lib/services';
 import { getCustomers, ensureCustomerExists, Customer } from '@/lib/customers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,8 +10,47 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Settings, Users, Search } from 'lucide-react';
+import { Settings, Users, Search, Printer } from 'lucide-react';
+
+function PrintableOrderTicket({ order }: { order: Order }) {
+  return (
+    <div id="print-ticket" className="p-6 text-sm print-area" dir="rtl" style={{ fontFamily: 'Arial, sans-serif' }}>
+      <div className="text-center border-b pb-3 mb-4">
+        <h2 className="text-xl font-bold">أمر تنفيذ</h2>
+        <p className="text-muted-foreground text-xs mt-1">نسخة الزبون</p>
+      </div>
+      <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+        <tbody>
+          <tr><td className="py-1.5 font-semibold w-32 align-top">رقم الطلب:</td><td className="py-1.5">{order.orderNumber}</td></tr>
+          <tr><td className="py-1.5 font-semibold align-top">التاريخ:</td><td className="py-1.5">{new Date(order.createdAt).toLocaleDateString('ar-LY')}</td></tr>
+          <tr><td className="py-1.5 font-semibold align-top">اسم العميل:</td><td className="py-1.5">{order.customerName}</td></tr>
+          <tr><td className="py-1.5 font-semibold align-top">رقم الهاتف:</td><td className="py-1.5">{order.phone}</td></tr>
+          <tr><td className="py-1.5 font-semibold align-top">نوع الخدمة:</td><td className="py-1.5">{getServiceLabel(order.serviceType)}</td></tr>
+          {order.description && <tr><td className="py-1.5 font-semibold align-top">التفاصيل:</td><td className="py-1.5">{order.description}</td></tr>}
+          {order.dimensions && <tr><td className="py-1.5 font-semibold align-top">المقاسات:</td><td className="py-1.5">{order.dimensions}</td></tr>}
+          {order.quantity && order.quantity > 1 && <tr><td className="py-1.5 font-semibold align-top">الكمية:</td><td className="py-1.5">{order.quantity}</td></tr>}
+          {order.notes && <tr><td className="py-1.5 font-semibold align-top">ملاحظات:</td><td className="py-1.5">{order.notes}</td></tr>}
+          {order.assignedDesigner && <tr><td className="py-1.5 font-semibold align-top">المصمم:</td><td className="py-1.5">{order.assignedDesigner}</td></tr>}
+          {order.assignedPrinter && <tr><td className="py-1.5 font-semibold align-top">مسؤول الطباعة:</td><td className="py-1.5">{order.assignedPrinter}</td></tr>}
+          {order.assignedInstaller && <tr><td className="py-1.5 font-semibold align-top">مسؤول التركيب:</td><td className="py-1.5">{order.assignedInstaller}</td></tr>}
+        </tbody>
+      </table>
+      <div className="border-t mt-4 pt-3 space-y-1.5">
+        <div className="flex justify-between"><span className="font-semibold">السعر الإجمالي:</span><span>{order.totalPrice.toLocaleString()} د.ل</span></div>
+        <div className="flex justify-between"><span className="font-semibold">العربون:</span><span>{order.deposit.toLocaleString()} د.ل</span></div>
+        <div className="flex justify-between font-bold text-base"><span>المتبقي:</span><span>{order.remainingAmount.toLocaleString()} د.ل</span></div>
+      </div>
+      {order.deliveryDate && (
+        <div className="border-t mt-3 pt-3 text-center">
+          <span className="font-semibold">تاريخ التسليم المتوقع: </span>
+          <span>{new Date(order.deliveryDate).toLocaleDateString('ar-LY')}</span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function OrderForm() {
   const navigate = useNavigate();
@@ -37,6 +76,8 @@ export default function OrderForm() {
 
   const [customerSearch, setCustomerSearch] = useState('');
   const [showCustomers, setShowCustomers] = useState(false);
+  const [printDialog, setPrintDialog] = useState(false);
+  const [newOrder, setNewOrder] = useState<Order | null>(null);
   const customers = useMemo(() => getCustomers(), []);
 
   const filteredCustomers = useMemo(() => {
@@ -75,6 +116,25 @@ export default function OrderForm() {
     setCustomerSearch('');
   };
 
+  const handlePrint = () => {
+    const content = document.getElementById('print-ticket');
+    if (!content) return;
+    const win = window.open('', '_blank', 'width=400,height=600');
+    if (!win) return;
+    win.document.write(`<html dir="rtl"><head><title>أمر تنفيذ</title><style>
+      body { font-family: Arial, sans-serif; margin: 0; padding: 16px; font-size: 14px; }
+      table { width: 100%; border-collapse: collapse; }
+      td { padding: 4px 0; vertical-align: top; }
+      .font-semibold { font-weight: 600; } .font-bold { font-weight: 700; }
+      .border-t { border-top: 1px solid #ccc; } .border-b { border-bottom: 1px solid #ccc; }
+      .text-center { text-align: center; }
+      .flex { display: flex; justify-content: space-between; }
+      @media print { body { margin: 0; } }
+    </style></head><body>${content.innerHTML}</body></html>`);
+    win.document.close();
+    win.print();
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.customerName || !form.phone) {
@@ -86,11 +146,13 @@ export default function OrderForm() {
     if (isEdit) {
       updateOrder(id!, { ...form });
       toast.success('تم تعديل الطلب بنجاح');
+      navigate('/orders');
     } else {
-      addOrder(form);
+      const order = addOrder(form);
       toast.success('تم إضافة الطلب بنجاح');
+      setNewOrder(order);
+      setPrintDialog(true);
     }
-    navigate('/orders');
   };
 
   return (
@@ -194,9 +256,9 @@ export default function OrderForm() {
           </div>
         </fieldset>
 
-        {/* Employees */}
+        {/* Employees - Optional */}
         <fieldset className="space-y-4">
-          <legend className="text-sm font-semibold text-muted-foreground border-b pb-2 mb-3 w-full">المسؤولون</legend>
+          <legend className="text-sm font-semibold text-muted-foreground border-b pb-2 mb-3 w-full">المسؤولون <span className="text-xs font-normal">(اختياري)</span></legend>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <Label>المصمم</Label>
@@ -262,6 +324,28 @@ export default function OrderForm() {
           <Button type="button" variant="outline" onClick={() => navigate('/orders')}>إلغاء</Button>
         </div>
       </form>
+
+      {/* Print dialog after new order */}
+      <Dialog open={printDialog} onOpenChange={(open) => {
+        if (!open) navigate('/orders');
+        setPrintDialog(open);
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>تم إضافة الطلب بنجاح ✓</DialogTitle>
+          </DialogHeader>
+          {newOrder && <PrintableOrderTicket order={newOrder} />}
+          <DialogFooter className="flex gap-2 sm:gap-2">
+            <Button onClick={handlePrint} className="gap-2">
+              <Printer className="w-4 h-4" />
+              طباعة نسخة للزبون
+            </Button>
+            <Button variant="outline" onClick={() => { setPrintDialog(false); navigate('/orders'); }}>
+              تخطي
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
