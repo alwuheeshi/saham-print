@@ -15,7 +15,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        cairo: ["Cairo", "sans-serif"],
+        cairo: ["Geeza Pro", "Noto Sans Arabic", "Segoe UI", "Tahoma", "Arial", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
