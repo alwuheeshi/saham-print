@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getOrders, deleteOrder, updateOrder } from '@/lib/store';
 import { Order, STATUS_LABELS, PAYMENT_STATUS_LABELS, OrderStatus } from '@/lib/types';
-import { getServiceLabel } from '@/lib/services';
+import { getServiceLabel, getServices } from '@/lib/services';
 import { OrderStatusBadge, PaymentStatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,20 +16,25 @@ export default function OrdersList() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  const reload = () => setOrders(getOrders());
-  useEffect(reload, []);
+  const reload = async () => {
+    await getServices();
+    setOrders(await getOrders());
+  };
+  useEffect(() => {
+    reload().catch(console.error);
+  }, []);
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('هل أنت متأكد من حذف هذا الطلب؟')) {
-      deleteOrder(id);
-      reload();
+      await deleteOrder(id);
+      await reload();
       toast.success('تم حذف الطلب');
     }
   };
 
-  const handleStatusChange = (id: string, status: OrderStatus) => {
-    updateOrder(id, { status });
-    reload();
+  const handleStatusChange = async (id: string, status: OrderStatus) => {
+    await updateOrder(id, { status });
+    await reload();
   };
 
   const filtered = orders.filter(o => {

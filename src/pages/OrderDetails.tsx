@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getOrder, addPayment } from '@/lib/store';
 import { Order, STATUS_LABELS } from '@/lib/types';
-import { getServiceLabel } from '@/lib/services';
+import { getServiceLabel, getServices } from '@/lib/services';
 import { OrderStatusBadge, PaymentStatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,25 +19,26 @@ export default function OrderDetails() {
   const [payNote, setPayNote] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const reload = useCallback(() => {
-    const o = getOrder(id!);
+  const reload = useCallback(async () => {
+    await getServices();
+    const o = await getOrder(id!);
     if (o) setOrder(o);
     else navigate('/orders');
   }, [id, navigate]);
 
   useEffect(() => {
-    reload();
+    reload().catch(console.error);
   }, [reload]);
 
   if (!order) return null;
 
-  const handleAddPayment = () => {
+  const handleAddPayment = async () => {
     if (payAmount <= 0) return;
-    addPayment(order.id, payAmount, payNote);
+    await addPayment(order.id, payAmount, payNote);
     setPayAmount(0);
     setPayNote('');
     setDialogOpen(false);
-    reload();
+    await reload();
     toast.success('تم إضافة الدفعة');
   };
 

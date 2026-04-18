@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { getOrders } from '@/lib/store';
 import { Order, STATUS_LABELS } from '@/lib/types';
-import { getServiceLabel } from '@/lib/services';
+import { getServiceLabel, getServices } from '@/lib/services';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -59,7 +59,11 @@ export default function ReportsPage() {
   const [customFrom, setCustomFrom] = useState<Date | undefined>();
   const [customTo, setCustomTo] = useState<Date | undefined>();
 
-  useEffect(() => { setAllOrders(getOrders()); }, []);
+  useEffect(() => {
+    Promise.all([getServices(), getOrders()])
+      .then(([, orders]) => setAllOrders(orders))
+      .catch(console.error);
+  }, []);
 
   const filtered = useMemo(() => {
     const range = getDateRange(period, customFrom, customTo);

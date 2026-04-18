@@ -2,8 +2,8 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { addOrder, getOrder, updateOrder } from '@/lib/store';
 import { Order, OrderStatus, STATUS_LABELS } from '@/lib/types';
-import { getServices, getServiceLabel } from '@/lib/services';
-import { getCustomers, ensureCustomerExists, Customer } from '@/lib/customers';
+import { getServices, getServiceLabel, CustomService } from '@/lib/services';
+import { getCustomers, Customer } from '@/lib/customers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -78,7 +78,8 @@ export default function OrderForm() {
   const [showCustomers, setShowCustomers] = useState(false);
   const [printDialog, setPrintDialog] = useState(false);
   const [newOrder, setNewOrder] = useState<Order | null>(null);
-  const customers = useMemo(() => getCustomers(), []);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [services, setServices] = useState<CustomService[]>([]);
 
   const filteredCustomers = useMemo(() => {
     if (!customerSearch.trim()) return customers;
@@ -87,8 +88,13 @@ export default function OrderForm() {
   }, [customers, customerSearch]);
 
   useEffect(() => {
-    if (id) {
-      const order = getOrder(id);
+    const load = async () => {
+      const [loadedCustomers, loadedServices] = await Promise.all([getCustomers(), getServices()]);
+      setCustomers(loadedCustomers);
+      setServices(loadedServices);
+
+      if (!id) return;
+      const order = await getOrder(id);
       if (order) {
         setForm({
           customerName: order.customerName,
@@ -107,7 +113,8 @@ export default function OrderForm() {
           status: order.status,
         });
       }
-    }
+    };
+    load().catch(console.error);
   }, [id]);
 
   const selectCustomer = (c: Customer) => {
@@ -135,20 +142,19 @@ export default function OrderForm() {
     win.print();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.customerName || !form.phone) {
       toast.error('يرجى ملء الحقول المطلوبة');
       return;
     }
-    ensureCustomerExists(form.customerName, form.phone);
 
     if (isEdit) {
-      updateOrder(id!, { ...form });
+      await updateOrder(id!, { ...form });
       toast.success('تم تعديل الطلب بنجاح');
       navigate('/orders');
     } else {
-      const order = addOrder(form);
+      const order = await addOrder(form);
       toast.success('تم إضافة الطلب بنجاح');
       setNewOrder(order);
       setPrintDialog(true);
@@ -227,7 +233,7 @@ export default function OrderForm() {
             <Select value={form.serviceType} onValueChange={v => setForm(f => ({ ...f, serviceType: v }))}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {getServices().map(s => (
+                {services.map(s => (
                   <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
                 ))}
               </SelectContent>

@@ -1,42 +1,14 @@
-import { useState } from 'react';
-import { exportBackup, importBackup } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Download, Upload } from 'lucide-react';
 
 export default function BackupPage() {
   const handleExport = () => {
-    const data = exportBackup();
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `printshop-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('تم تصدير النسخة الاحتياطية');
+    toast.info('سيتم إضافة نسخ احتياطي لقاعدة SQLite في خطوة النسخ الاحتياطي.');
   };
 
   const handleImport = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        try {
-          importBackup(ev.target?.result as string);
-          toast.success('تم استعادة النسخة الاحتياطية بنجاح. سيتم تحديث الصفحة.');
-          setTimeout(() => window.location.reload(), 1000);
-        } catch {
-          toast.error('ملف غير صالح');
-        }
-      };
-      reader.readAsText(file);
-    };
-    input.click();
+    toast.info('سيتم إضافة استعادة نسخ SQLite الاحتياطية في خطوة النسخ الاحتياطي.');
   };
 
   return (

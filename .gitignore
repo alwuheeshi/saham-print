@@ -12,7 +12,6 @@ dist
 dist-ssr
 src-tauri/target
 src-tauri/gen
-src-tauri/Cargo.lock
 *.local
 package-lock.json
 bun.lock

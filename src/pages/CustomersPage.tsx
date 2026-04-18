@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Trash2, Edit, Eye, Search, User } from 'lucide-react';
 import { toast } from 'sonner';
-import { getServiceLabel } from '@/lib/services';
+import { getServiceLabel, getServices } from '@/lib/services';
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -19,11 +19,15 @@ export default function CustomersPage() {
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null);
   const [allOrders, setAllOrders] = useState<Order[]>([]);
 
-  const reload = () => {
-    setCustomers(getCustomers());
-    setAllOrders(getOrders());
+  const reload = async () => {
+    const [customers, orders] = await Promise.all([getCustomers(), getOrders(), getServices()])
+      .then(([customers, orders]) => [customers, orders] as const);
+    setCustomers(customers);
+    setAllOrders(orders);
   };
-  useEffect(reload, []);
+  useEffect(() => {
+    reload().catch(console.error);
+  }, []);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return customers;
@@ -34,19 +38,19 @@ export default function CustomersPage() {
   const getCustomerOrders = (name: string, phone: string) =>
     allOrders.filter(o => o.customerName === name && o.phone === phone);
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('هل أنت متأكد من حذف هذا العميل؟')) {
-      deleteCustomer(id);
-      reload();
+      await deleteCustomer(id);
+      await reload();
       toast.success('تم حذف العميل');
     }
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editCustomer) return;
-    updateCustomer(editCustomer.id, editCustomer);
+    await updateCustomer(editCustomer.id, editCustomer);
     setEditCustomer(null);
-    reload();
+    await reload();
     toast.success('تم تعديل بيانات العميل');
   };
 

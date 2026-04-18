@@ -1,6 +1,10 @@
-import { ServiceType } from './types';
-
-const SERVICES_KEY = 'printshop_services';
+import {
+  addDbService,
+  deleteDbService,
+  listDbServices,
+  updateDbService,
+  type DbService,
+} from './database';
 
 export interface CustomService {
   id: string;
@@ -17,17 +21,37 @@ const DEFAULT_SERVICES: CustomService[] = [
   { id: 'other', label: 'أخرى' },
 ];
 
-export function getServices(): CustomService[] {
-  const data = localStorage.getItem(SERVICES_KEY);
-  if (!data) return DEFAULT_SERVICES;
-  return JSON.parse(data);
+let serviceCache: CustomService[] = DEFAULT_SERVICES;
+
+function toService(service: DbService): CustomService {
+  return {
+    id: service.id,
+    label: service.label,
+  };
 }
 
-export function saveServices(services: CustomService[]) {
-  localStorage.setItem(SERVICES_KEY, JSON.stringify(services));
+export async function getServices(): Promise<CustomService[]> {
+  serviceCache = (await listDbServices()).map(toService);
+  return serviceCache;
+}
+
+export async function addService(label: string): Promise<CustomService> {
+  const service = toService(await addDbService({ label }));
+  serviceCache = [...serviceCache, service];
+  return service;
+}
+
+export async function renameService(id: string, label: string): Promise<CustomService> {
+  const service = toService(await updateDbService(id, label));
+  serviceCache = serviceCache.map(item => item.id === id ? service : item);
+  return service;
+}
+
+export async function removeService(id: string): Promise<void> {
+  await deleteDbService(id);
+  serviceCache = serviceCache.filter(item => item.id !== id);
 }
 
 export function getServiceLabel(id: string): string {
-  const services = getServices();
-  return services.find(s => s.id === id)?.label || id;
+  return serviceCache.find(s => s.id === id)?.label || id;
 }

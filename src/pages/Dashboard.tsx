@@ -32,7 +32,7 @@ export default function Dashboard() {
   const [customTo, setCustomTo] = useState<Date | undefined>();
 
   useEffect(() => {
-    setAllOrders(getOrders());
+    getOrders().then(setAllOrders).catch(console.error);
   }, []);
 
   const orders = useMemo(() => {
