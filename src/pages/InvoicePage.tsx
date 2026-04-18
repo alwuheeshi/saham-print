@@ -156,7 +156,7 @@ export default function InvoicePage() {
     const o = getOrder(id!);
     if (o) setOrder(o);
     else navigate('/orders');
-  }, [id]);
+  }, [id, navigate]);
 
   if (!order) return null;
 

@@ -14,7 +14,7 @@ import {
 import { ar } from 'date-fns/locale';
 import {
   CalendarIcon, ClipboardList, DollarSign, TrendingUp, Users,
-  BarChart3, Printer
+  BarChart3, Printer, type LucideIcon
 } from 'lucide-react';
 
 type Period = 'today' | 'week' | 'month' | 'quarter' | 'half' | 'year' | 'custom';
@@ -270,7 +270,7 @@ export default function ReportsPage() {
   );
 }
 
-function SummaryCard({ icon: Icon, label, value, color }: { icon: any; label: string; value: string; color: string }) {
+function SummaryCard({ icon: Icon, label, value, color }: { icon: LucideIcon; label: string; value: string; color: string }) {
   return (
     <div className="bg-card rounded-lg border p-4 shadow-sm">
       <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 ${color}`}>

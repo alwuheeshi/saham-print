@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getOrder, addPayment } from '@/lib/store';
 import { Order, STATUS_LABELS } from '@/lib/types';
@@ -19,13 +19,15 @@ export default function OrderDetails() {
   const [payNote, setPayNote] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const reload = () => {
+  const reload = useCallback(() => {
     const o = getOrder(id!);
     if (o) setOrder(o);
     else navigate('/orders');
-  };
+  }, [id, navigate]);
 
-  useEffect(reload, [id]);
+  useEffect(() => {
+    reload();
+  }, [reload]);
 
   if (!order) return null;
 

@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { getOrders } from '@/lib/store';
 import { Order, STATUS_LABELS, OrderStatus } from '@/lib/types';
-import { ClipboardList, Clock, CheckCircle, AlertTriangle, DollarSign, Ban, CalendarIcon, Palette, Printer } from 'lucide-react';
+import { ClipboardList, Clock, CheckCircle, AlertTriangle, DollarSign, Ban, CalendarIcon, type LucideIcon } from 'lucide-react';
 import { startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { format } from 'date-fns';
 
 type Period = 'month' | 'year' | 'custom';
 
-function StatCard({ icon: Icon, label, value, color }: { icon: any; label: string; value: string | number; color: string }) {
+function StatCard({ icon: Icon, label, value, color }: { icon: LucideIcon; label: string; value: string | number; color: string }) {
   return (
     <div className="bg-card rounded-lg border p-5 flex items-center gap-4 shadow-sm">
       <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${color}`}>
