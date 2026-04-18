@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, ClipboardList, PlusCircle, AlertTriangle, LogOut, Lock, Users, Database, Settings, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { logout } from '@/pages/LoginPage';
+import { logout } from '@/lib/auth';
 import logo from '@/assets/logo.jpg';
 
 const navItems = [

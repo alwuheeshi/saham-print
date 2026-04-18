@@ -25,6 +25,27 @@ pub struct DatabaseStatus {
     payment_count: i64,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthStatus {
+    authenticated: bool,
+    username: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AccountSettings {
+    username: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AccountUpdateInput {
+    pub current_password: String,
+    pub username: String,
+    pub new_password: Option<String>,
+}
+
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CustomerRecord {
@@ -227,9 +248,11 @@ fn migrate(conn: &Connection) -> Result<(), String> {
         conn.execute_batch(SCHEMA_V1)
             .map_err(|err| err.to_string())?;
         seed_default_services(conn)?;
-        conn.pragma_update(None, "user_version", 1)
-            .map_err(|err| err.to_string())?;
     }
+
+    ensure_default_settings(conn)?;
+    conn.pragma_update(None, "user_version", 1)
+        .map_err(|err| err.to_string())?;
 
     Ok(())
 }
@@ -253,11 +276,24 @@ fn seed_default_services(conn: &Connection) -> Result<(), String> {
         .map_err(|err| err.to_string())?;
     }
 
-    conn.execute(
-        "INSERT OR IGNORE INTO settings (key, value) VALUES ('next_order_number', '1001')",
-        [],
-    )
-    .map_err(|err| err.to_string())?;
+    Ok(())
+}
+
+fn ensure_default_settings(conn: &Connection) -> Result<(), String> {
+    let settings = [
+        ("next_order_number", "1001"),
+        ("auth_username", "admin"),
+        ("auth_password", "admin123"),
+        ("auth_session", "false"),
+    ];
+
+    for (key, value) in settings {
+        conn.execute(
+            "INSERT OR IGNORE INTO settings (key, value) VALUES (?1, ?2)",
+            params![key, value],
+        )
+        .map_err(|err| err.to_string())?;
+    }
 
     Ok(())
 }
@@ -266,6 +302,76 @@ fn seed_default_services(conn: &Connection) -> Result<(), String> {
 pub fn database_status(db: tauri::State<'_, AppDb>) -> Result<DatabaseStatus, String> {
     let conn = db.conn.lock().map_err(|err| err.to_string())?;
     database_status_from_conn(&conn, &db.path)
+}
+
+#[tauri::command]
+pub fn auth_status(db: tauri::State<'_, AppDb>) -> Result<AuthStatus, String> {
+    let conn = db.conn.lock().map_err(|err| err.to_string())?;
+    auth_status_from_conn(&conn)
+}
+
+#[tauri::command]
+pub fn auth_login(
+    username: String,
+    password: String,
+    db: tauri::State<'_, AppDb>,
+) -> Result<AuthStatus, String> {
+    let conn = db.conn.lock().map_err(|err| err.to_string())?;
+    let expected_username =
+        get_setting(&conn, "auth_username")?.unwrap_or_else(|| "admin".to_string());
+    let expected_password =
+        get_setting(&conn, "auth_password")?.unwrap_or_else(|| "admin123".to_string());
+
+    if username.trim() != expected_username || password != expected_password {
+        return Err("Invalid username or password".to_string());
+    }
+
+    set_setting(&conn, "auth_session", "true")?;
+    auth_status_from_conn(&conn)
+}
+
+#[tauri::command]
+pub fn auth_logout(db: tauri::State<'_, AppDb>) -> Result<AuthStatus, String> {
+    let conn = db.conn.lock().map_err(|err| err.to_string())?;
+    set_setting(&conn, "auth_session", "false")?;
+    auth_status_from_conn(&conn)
+}
+
+#[tauri::command]
+pub fn auth_get_account(db: tauri::State<'_, AppDb>) -> Result<AccountSettings, String> {
+    let conn = db.conn.lock().map_err(|err| err.to_string())?;
+    Ok(AccountSettings {
+        username: get_setting(&conn, "auth_username")?.unwrap_or_else(|| "admin".to_string()),
+    })
+}
+
+#[tauri::command]
+pub fn auth_update_account(
+    input: AccountUpdateInput,
+    db: tauri::State<'_, AppDb>,
+) -> Result<AccountSettings, String> {
+    validate_required(&input.username, "Username")?;
+
+    let conn = db.conn.lock().map_err(|err| err.to_string())?;
+    let current_password =
+        get_setting(&conn, "auth_password")?.unwrap_or_else(|| "admin123".to_string());
+    if input.current_password != current_password {
+        return Err("Current password is incorrect".to_string());
+    }
+
+    let username = input.username.trim();
+    set_setting(&conn, "auth_username", username)?;
+
+    if let Some(password) = clean_optional(input.new_password) {
+        if password.chars().count() < 4 {
+            return Err("New password must be at least 4 characters".to_string());
+        }
+        set_setting(&conn, "auth_password", &password)?;
+    }
+
+    Ok(AccountSettings {
+        username: username.to_string(),
+    })
 }
 
 #[tauri::command]
@@ -592,7 +698,11 @@ pub fn db_import_backup(
     )
     .map_err(|err| err.to_string())?;
 
-    for setting in &backup.settings {
+    for setting in backup
+        .settings
+        .iter()
+        .filter(|setting| setting.key != "auth_session")
+    {
         tx.execute(
             "INSERT INTO settings (key, value, updated_at) VALUES (?1, ?2, ?3)",
             params![setting.key, setting.value, setting.updated_at],
@@ -682,6 +792,8 @@ pub fn db_import_backup(
     }
 
     ensure_next_order_number(&tx)?;
+    ensure_default_settings(&tx)?;
+    set_setting(&tx, "auth_session", "false")?;
     tx.commit().map_err(|err| err.to_string())?;
 
     database_status_from_conn(&conn, &db.path)
@@ -708,7 +820,9 @@ fn database_status_from_conn(conn: &Connection, path: &PathBuf) -> Result<Databa
 
 fn list_backup_settings(conn: &Connection) -> Result<Vec<BackupSetting>, String> {
     let mut stmt = conn
-        .prepare("SELECT key, value, updated_at FROM settings ORDER BY key")
+        .prepare(
+            "SELECT key, value, updated_at FROM settings WHERE key <> 'auth_session' ORDER BY key",
+        )
         .map_err(|err| err.to_string())?;
     let rows = stmt
         .query_map([], |row| {
@@ -903,6 +1017,39 @@ fn validate_backup(backup: &BackupData) -> Result<(), String> {
         }
     }
 
+    Ok(())
+}
+
+fn auth_status_from_conn(conn: &Connection) -> Result<AuthStatus, String> {
+    let authenticated = get_setting(conn, "auth_session")?
+        .map(|value| value == "true")
+        .unwrap_or(false);
+    let username = get_setting(conn, "auth_username")?.unwrap_or_else(|| "admin".to_string());
+
+    Ok(AuthStatus {
+        authenticated,
+        username,
+    })
+}
+
+fn get_setting(conn: &Connection, key: &str) -> Result<Option<String>, String> {
+    conn.query_row(
+        "SELECT value FROM settings WHERE key = ?1",
+        params![key],
+        |row| row.get(0),
+    )
+    .optional()
+    .map_err(|err| err.to_string())
+}
+
+fn set_setting(conn: &Connection, key: &str, value: &str) -> Result<(), String> {
+    conn.execute(
+        "INSERT INTO settings (key, value, updated_at)
+         VALUES (?1, ?2, datetime('now'))
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')",
+        params![key, value],
+    )
+    .map_err(|err| err.to_string())?;
     Ok(())
 }
 
@@ -1360,6 +1507,19 @@ mod tests {
         assert_eq!(schema_version, 1);
         assert_eq!(service_count, 7);
         assert_eq!(order_count, 0);
+    }
+
+    #[test]
+    fn migration_creates_default_auth_settings() {
+        let conn = migrated_connection();
+
+        let status = auth_status_from_conn(&conn).expect("auth status");
+        assert!(!status.authenticated);
+        assert_eq!(status.username, "admin");
+        assert_eq!(
+            get_setting(&conn, "auth_password").expect("password setting"),
+            Some("admin123".to_string())
+        );
     }
 
     #[test]

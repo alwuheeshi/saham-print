@@ -1,38 +1,42 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { ArrowRight, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
-const CREDS_KEY = 'printshop_creds';
-
-export function getCredentials(): { username: string; password: string } {
-  const data = localStorage.getItem(CREDS_KEY);
-  if (data) return JSON.parse(data);
-  return { username: 'admin', password: 'admin123' };
-}
-
-export function saveCredentials(creds: { username: string; password: string }) {
-  localStorage.setItem(CREDS_KEY, JSON.stringify(creds));
-}
+import { getAccountSettings, updateAccountSettings } from '@/lib/database';
 
 export default function ChangePassword() {
-  const creds = getCredentials();
-  const [newUsername, setNewUsername] = useState(creds.username);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
   const [currentPass, setCurrentPass] = useState('');
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const creds = getCredentials();
+  useEffect(() => {
+    let cancelled = false;
 
-    if (currentPass !== creds.password) {
-      toast.error('كلمة المرور الحالية غير صحيحة');
-      return;
-    }
+    getAccountSettings()
+      .then(account => {
+        if (!cancelled) setNewUsername(account.username);
+      })
+      .catch(() => {
+        toast.error('تعذر تحميل إعدادات الحساب');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
     if (!newUsername.trim()) {
       toast.error('اسم المستخدم لا يمكن أن يكون فارغاً');
       return;
@@ -46,14 +50,23 @@ export default function ChangePassword() {
       return;
     }
 
-    saveCredentials({
-      username: newUsername.trim(),
-      password: newPass || creds.password,
-    });
-    setCurrentPass('');
-    setNewPass('');
-    setConfirmPass('');
-    toast.success('تم حفظ التغييرات بنجاح');
+    setSaving(true);
+    try {
+      const account = await updateAccountSettings({
+        currentPassword: currentPass,
+        username: newUsername.trim(),
+        newPassword: newPass || null,
+      });
+      setNewUsername(account.username);
+      setCurrentPass('');
+      setNewPass('');
+      setConfirmPass('');
+      toast.success('تم حفظ التغييرات بنجاح');
+    } catch {
+      toast.error('كلمة المرور الحالية غير صحيحة');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -74,22 +87,24 @@ export default function ChangePassword() {
 
         <div>
           <Label>اسم المستخدم</Label>
-          <Input value={newUsername} onChange={e => setNewUsername(e.target.value)} />
+          <Input value={newUsername} onChange={e => setNewUsername(e.target.value)} disabled={loading} />
         </div>
         <div>
           <Label>كلمة المرور الحالية <span className="text-destructive">*</span></Label>
-          <Input type="password" value={currentPass} onChange={e => setCurrentPass(e.target.value)} />
+          <Input type="password" value={currentPass} onChange={e => setCurrentPass(e.target.value)} disabled={loading} />
         </div>
         <div>
           <Label>كلمة المرور الجديدة <span className="text-xs text-muted-foreground">(اتركه فارغاً للإبقاء على الحالية)</span></Label>
-          <Input type="password" value={newPass} onChange={e => setNewPass(e.target.value)} />
+          <Input type="password" value={newPass} onChange={e => setNewPass(e.target.value)} disabled={loading} />
         </div>
         <div>
           <Label>تأكيد كلمة المرور الجديدة</Label>
-          <Input type="password" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} />
+          <Input type="password" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} disabled={loading} />
         </div>
 
-        <Button type="submit" className="w-full">حفظ التغييرات</Button>
+        <Button type="submit" className="w-full" disabled={loading || saving}>
+          {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+        </Button>
       </form>
     </div>
   );

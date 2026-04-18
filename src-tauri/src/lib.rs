@@ -11,6 +11,11 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             db::database_status,
+            db::auth_status,
+            db::auth_login,
+            db::auth_logout,
+            db::auth_get_account,
+            db::auth_update_account,
             db::db_list_customers,
             db::db_add_customer,
             db::db_update_customer,

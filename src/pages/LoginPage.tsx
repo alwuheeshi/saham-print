@@ -5,31 +5,28 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { LogIn } from 'lucide-react';
 import logo from '@/assets/logo.jpg';
-import { getCredentials } from './ChangePassword';
+import { login } from '@/lib/database';
 
-const AUTH_KEY = 'printshop_auth';
-
-export function isAuthenticated(): boolean {
-  return localStorage.getItem(AUTH_KEY) === 'true';
+interface LoginPageProps {
+  onAuthenticated: () => void;
 }
 
-export function logout() {
-  localStorage.removeItem(AUTH_KEY);
-  window.location.reload();
-}
-
-export default function LoginPage() {
+export default function LoginPage({ onAuthenticated }: LoginPageProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const creds = getCredentials();
-    if (username === creds.username && password === creds.password) {
-      localStorage.setItem(AUTH_KEY, 'true');
-      window.location.reload();
-    } else {
+    setSubmitting(true);
+
+    try {
+      await login(username, password);
+      onAuthenticated();
+    } catch {
       toast.error('اسم المستخدم أو كلمة المرور غير صحيحة');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -62,9 +59,9 @@ export default function LoginPage() {
                 placeholder="••••••"
               />
             </div>
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full" disabled={submitting}>
               <LogIn className="w-4 h-4 ml-2" />
-              تسجيل الدخول
+              {submitting ? 'جاري الدخول...' : 'تسجيل الدخول'}
             </Button>
           </form>
 

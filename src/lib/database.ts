@@ -10,6 +10,21 @@ export interface DatabaseStatus {
   paymentCount: number;
 }
 
+export interface AuthStatus {
+  authenticated: boolean;
+  username: string;
+}
+
+export interface AccountSettings {
+  username: string;
+}
+
+export interface AccountUpdateInput {
+  currentPassword: string;
+  username: string;
+  newPassword?: string | null;
+}
+
 export interface DbCustomer {
   id: string;
   name: string;
@@ -150,6 +165,26 @@ export interface DbBackupData {
 
 export function getDatabaseStatus(): Promise<DatabaseStatus> {
   return invoke<DatabaseStatus>('database_status');
+}
+
+export function getAuthStatus(): Promise<AuthStatus> {
+  return invoke<AuthStatus>('auth_status');
+}
+
+export function login(username: string, password: string): Promise<AuthStatus> {
+  return invoke<AuthStatus>('auth_login', { username, password });
+}
+
+export function logoutSession(): Promise<AuthStatus> {
+  return invoke<AuthStatus>('auth_logout');
+}
+
+export function getAccountSettings(): Promise<AccountSettings> {
+  return invoke<AccountSettings>('auth_get_account');
+}
+
+export function updateAccountSettings(input: AccountUpdateInput): Promise<AccountSettings> {
+  return invoke<AccountSettings>('auth_update_account', { input });
 }
 
 export function listDbCustomers(): Promise<DbCustomer[]> {

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -15,17 +16,54 @@ import BackupPage from "@/pages/BackupPage";
 import ReportsPage from "@/pages/ReportsPage";
 import ChangePassword from "@/pages/ChangePassword";
 import NotFound from "@/pages/NotFound";
-import LoginPage, { isAuthenticated } from "@/pages/LoginPage";
+import LoginPage from "@/pages/LoginPage";
+import { getAuthStatus } from "@/lib/database";
 
 const queryClient = new QueryClient();
 
 const App = () => {
-  if (!isAuthenticated()) {
+  const [loadingAuth, setLoadingAuth] = useState(true);
+  const [authenticated, setAuthenticated] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getAuthStatus()
+      .then(status => {
+        if (!cancelled) setAuthenticated(status.authenticated);
+      })
+      .catch(error => {
+        console.error(error);
+        if (!cancelled) setAuthenticated(false);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingAuth(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (loadingAuth) {
     return (
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Sonner />
-          <LoginPage />
+          <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground">
+            جاري التحميل...
+          </div>
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  if (!authenticated) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Sonner />
+          <LoginPage onAuthenticated={() => setAuthenticated(true)} />
         </TooltipProvider>
       </QueryClientProvider>
     );
