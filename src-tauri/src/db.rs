@@ -1,6 +1,7 @@
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use std::{
+    collections::{HashMap, HashSet},
     fs,
     path::PathBuf,
     sync::Mutex,
@@ -122,6 +123,84 @@ pub struct PaymentInput {
     pub note: Option<String>,
 }
 
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BackupData {
+    pub format_version: i64,
+    pub app_version: String,
+    pub exported_at: String,
+    pub settings: Vec<BackupSetting>,
+    pub customers: Vec<BackupCustomer>,
+    pub services: Vec<BackupService>,
+    pub orders: Vec<BackupOrder>,
+    pub payments: Vec<BackupPayment>,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BackupSetting {
+    pub key: String,
+    pub value: String,
+    pub updated_at: String,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BackupCustomer {
+    pub id: String,
+    pub name: String,
+    pub phone: String,
+    pub business: Option<String>,
+    pub address: Option<String>,
+    pub notes: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BackupService {
+    pub id: String,
+    pub label: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BackupOrder {
+    pub id: String,
+    pub order_number: i64,
+    pub customer_id: String,
+    pub customer_name_snapshot: String,
+    pub customer_phone_snapshot: String,
+    pub service_id: String,
+    pub description: String,
+    pub dimensions: Option<String>,
+    pub quantity: i64,
+    pub notes: Option<String>,
+    pub assigned_designer: Option<String>,
+    pub assigned_printer: Option<String>,
+    pub assigned_installer: Option<String>,
+    pub total_price: f64,
+    pub deposit: f64,
+    pub delivery_date: String,
+    pub status: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BackupPayment {
+    pub id: String,
+    pub order_id: String,
+    pub amount: f64,
+    pub paid_at: String,
+    pub note: Option<String>,
+    pub created_at: String,
+}
+
 pub fn init(app: &AppHandle) -> Result<AppDb, String> {
     let app_data_dir = app.path().app_data_dir().map_err(|err| err.to_string())?;
     fs::create_dir_all(&app_data_dir).map_err(|err| err.to_string())?;
@@ -186,17 +265,7 @@ fn seed_default_services(conn: &Connection) -> Result<(), String> {
 #[tauri::command]
 pub fn database_status(db: tauri::State<'_, AppDb>) -> Result<DatabaseStatus, String> {
     let conn = db.conn.lock().map_err(|err| err.to_string())?;
-
-    Ok(DatabaseStatus {
-        path: db.path.to_string_lossy().into_owned(),
-        schema_version: conn
-            .pragma_query_value(None, "user_version", |row| row.get(0))
-            .map_err(|err| err.to_string())?,
-        customer_count: count_rows(&conn, "customers")?,
-        service_count: count_rows(&conn, "services")?,
-        order_count: count_rows(&conn, "orders")?,
-        payment_count: count_rows(&conn, "payments")?,
-    })
+    database_status_from_conn(&conn, &db.path)
 }
 
 #[tauri::command]
@@ -330,7 +399,10 @@ pub fn db_list_orders(db: tauri::State<'_, AppDb>) -> Result<Vec<OrderRecord>, S
 }
 
 #[tauri::command]
-pub fn db_get_order(id: String, db: tauri::State<'_, AppDb>) -> Result<Option<OrderRecord>, String> {
+pub fn db_get_order(
+    id: String,
+    db: tauri::State<'_, AppDb>,
+) -> Result<Option<OrderRecord>, String> {
     let conn = db.conn.lock().map_err(|err| err.to_string())?;
     get_order_by_id(&conn, &id)
 }
@@ -471,17 +543,367 @@ pub fn db_add_payment(
 
     conn.execute(
         "INSERT INTO payments (id, order_id, amount, note) VALUES (?1, ?2, ?3, ?4)",
-        params![generate_id(), order_id, input.amount, clean_optional(input.note)],
+        params![
+            generate_id(),
+            order_id,
+            input.amount,
+            clean_optional(input.note)
+        ],
     )
     .map_err(|err| err.to_string())?;
 
     get_order_by_id(&conn, &order_id)?.ok_or_else(|| "Order not found".to_string())
 }
 
+#[tauri::command]
+pub fn db_export_backup(db: tauri::State<'_, AppDb>) -> Result<BackupData, String> {
+    let conn = db.conn.lock().map_err(|err| err.to_string())?;
+
+    Ok(BackupData {
+        format_version: 1,
+        app_version: env!("CARGO_PKG_VERSION").to_string(),
+        exported_at: current_timestamp(),
+        settings: list_backup_settings(&conn)?,
+        customers: list_backup_customers(&conn)?,
+        services: list_backup_services(&conn)?,
+        orders: list_backup_orders(&conn)?,
+        payments: list_backup_payments(&conn)?,
+    })
+}
+
+#[tauri::command]
+pub fn db_import_backup(
+    backup: BackupData,
+    db: tauri::State<'_, AppDb>,
+) -> Result<DatabaseStatus, String> {
+    validate_backup(&backup)?;
+
+    let mut conn = db.conn.lock().map_err(|err| err.to_string())?;
+    let tx = conn.transaction().map_err(|err| err.to_string())?;
+
+    tx.execute_batch(
+        "PRAGMA foreign_keys = OFF;
+         DELETE FROM payments;
+         DELETE FROM orders;
+         DELETE FROM customers;
+         DELETE FROM services;
+         DELETE FROM settings;
+         PRAGMA foreign_keys = ON;",
+    )
+    .map_err(|err| err.to_string())?;
+
+    for setting in &backup.settings {
+        tx.execute(
+            "INSERT INTO settings (key, value, updated_at) VALUES (?1, ?2, ?3)",
+            params![setting.key, setting.value, setting.updated_at],
+        )
+        .map_err(|err| err.to_string())?;
+    }
+
+    for customer in &backup.customers {
+        tx.execute(
+            "INSERT INTO customers (id, name, phone, business, address, notes, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            params![
+                customer.id,
+                customer.name,
+                customer.phone,
+                customer.business,
+                customer.address,
+                customer.notes,
+                customer.created_at,
+                customer.updated_at
+            ],
+        )
+        .map_err(|err| err.to_string())?;
+    }
+
+    for service in &backup.services {
+        tx.execute(
+            "INSERT INTO services (id, label, created_at, updated_at) VALUES (?1, ?2, ?3, ?4)",
+            params![
+                service.id,
+                service.label,
+                service.created_at,
+                service.updated_at
+            ],
+        )
+        .map_err(|err| err.to_string())?;
+    }
+
+    for order in &backup.orders {
+        tx.execute(
+            "INSERT INTO orders (
+                id, order_number, customer_id, customer_name_snapshot, customer_phone_snapshot,
+                service_id, description, dimensions, quantity, notes, assigned_designer,
+                assigned_printer, assigned_installer, total_price, deposit, delivery_date,
+                status, created_at, updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)",
+            params![
+                order.id,
+                order.order_number,
+                order.customer_id,
+                order.customer_name_snapshot,
+                order.customer_phone_snapshot,
+                order.service_id,
+                order.description,
+                order.dimensions,
+                order.quantity,
+                order.notes,
+                order.assigned_designer,
+                order.assigned_printer,
+                order.assigned_installer,
+                order.total_price,
+                order.deposit,
+                order.delivery_date,
+                order.status,
+                order.created_at,
+                order.updated_at
+            ],
+        )
+        .map_err(|err| err.to_string())?;
+    }
+
+    for payment in &backup.payments {
+        tx.execute(
+            "INSERT INTO payments (id, order_id, amount, paid_at, note, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![
+                payment.id,
+                payment.order_id,
+                payment.amount,
+                payment.paid_at,
+                payment.note,
+                payment.created_at
+            ],
+        )
+        .map_err(|err| err.to_string())?;
+    }
+
+    ensure_next_order_number(&tx)?;
+    tx.commit().map_err(|err| err.to_string())?;
+
+    database_status_from_conn(&conn, &db.path)
+}
+
 fn count_rows(conn: &Connection, table: &str) -> Result<i64, String> {
     let sql = format!("SELECT COUNT(*) FROM {table}");
     conn.query_row(&sql, [], |row| row.get(0))
         .map_err(|err| err.to_string())
+}
+
+fn database_status_from_conn(conn: &Connection, path: &PathBuf) -> Result<DatabaseStatus, String> {
+    Ok(DatabaseStatus {
+        path: path.to_string_lossy().into_owned(),
+        schema_version: conn
+            .pragma_query_value(None, "user_version", |row| row.get(0))
+            .map_err(|err| err.to_string())?,
+        customer_count: count_rows(conn, "customers")?,
+        service_count: count_rows(conn, "services")?,
+        order_count: count_rows(conn, "orders")?,
+        payment_count: count_rows(conn, "payments")?,
+    })
+}
+
+fn list_backup_settings(conn: &Connection) -> Result<Vec<BackupSetting>, String> {
+    let mut stmt = conn
+        .prepare("SELECT key, value, updated_at FROM settings ORDER BY key")
+        .map_err(|err| err.to_string())?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(BackupSetting {
+                key: row.get(0)?,
+                value: row.get(1)?,
+                updated_at: row.get(2)?,
+            })
+        })
+        .map_err(|err| err.to_string())?;
+    collect_rows(rows)
+}
+
+fn list_backup_customers(conn: &Connection) -> Result<Vec<BackupCustomer>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, name, phone, business, address, notes, created_at, updated_at
+             FROM customers
+             ORDER BY created_at, id",
+        )
+        .map_err(|err| err.to_string())?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(BackupCustomer {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                phone: row.get(2)?,
+                business: row.get(3)?,
+                address: row.get(4)?,
+                notes: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
+            })
+        })
+        .map_err(|err| err.to_string())?;
+    collect_rows(rows)
+}
+
+fn list_backup_services(conn: &Connection) -> Result<Vec<BackupService>, String> {
+    let mut stmt = conn
+        .prepare("SELECT id, label, created_at, updated_at FROM services ORDER BY created_at, id")
+        .map_err(|err| err.to_string())?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(BackupService {
+                id: row.get(0)?,
+                label: row.get(1)?,
+                created_at: row.get(2)?,
+                updated_at: row.get(3)?,
+            })
+        })
+        .map_err(|err| err.to_string())?;
+    collect_rows(rows)
+}
+
+fn list_backup_orders(conn: &Connection) -> Result<Vec<BackupOrder>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, order_number, customer_id, customer_name_snapshot,
+                    customer_phone_snapshot, service_id, description, dimensions,
+                    quantity, notes, assigned_designer, assigned_printer,
+                    assigned_installer, total_price, deposit, delivery_date,
+                    status, created_at, updated_at
+             FROM orders
+             ORDER BY order_number",
+        )
+        .map_err(|err| err.to_string())?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(BackupOrder {
+                id: row.get(0)?,
+                order_number: row.get(1)?,
+                customer_id: row.get(2)?,
+                customer_name_snapshot: row.get(3)?,
+                customer_phone_snapshot: row.get(4)?,
+                service_id: row.get(5)?,
+                description: row.get(6)?,
+                dimensions: row.get(7)?,
+                quantity: row.get(8)?,
+                notes: row.get(9)?,
+                assigned_designer: row.get(10)?,
+                assigned_printer: row.get(11)?,
+                assigned_installer: row.get(12)?,
+                total_price: row.get(13)?,
+                deposit: row.get(14)?,
+                delivery_date: row.get(15)?,
+                status: row.get(16)?,
+                created_at: row.get(17)?,
+                updated_at: row.get(18)?,
+            })
+        })
+        .map_err(|err| err.to_string())?;
+    collect_rows(rows)
+}
+
+fn list_backup_payments(conn: &Connection) -> Result<Vec<BackupPayment>, String> {
+    let mut stmt = conn
+        .prepare("SELECT id, order_id, amount, paid_at, note, created_at FROM payments ORDER BY paid_at, id")
+        .map_err(|err| err.to_string())?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(BackupPayment {
+                id: row.get(0)?,
+                order_id: row.get(1)?,
+                amount: row.get(2)?,
+                paid_at: row.get(3)?,
+                note: row.get(4)?,
+                created_at: row.get(5)?,
+            })
+        })
+        .map_err(|err| err.to_string())?;
+    collect_rows(rows)
+}
+
+fn validate_backup(backup: &BackupData) -> Result<(), String> {
+    if backup.format_version != 1 {
+        return Err("Unsupported backup format version".to_string());
+    }
+    if backup.services.is_empty() {
+        return Err("Backup must contain at least one service".to_string());
+    }
+
+    let mut customer_ids = HashSet::new();
+    let mut service_ids = HashSet::new();
+    let mut order_ids = HashSet::new();
+    let mut order_totals = HashMap::new();
+    let mut payment_totals: HashMap<&str, f64> = HashMap::new();
+
+    for customer in &backup.customers {
+        validate_required(&customer.id, "Customer id")?;
+        validate_required(&customer.name, "Customer name")?;
+        validate_required(&customer.phone, "Customer phone")?;
+        if !customer_ids.insert(customer.id.as_str()) {
+            return Err("Backup contains duplicate customer ids".to_string());
+        }
+    }
+
+    for service in &backup.services {
+        validate_required(&service.id, "Service id")?;
+        validate_required(&service.label, "Service label")?;
+        if !service_ids.insert(service.id.as_str()) {
+            return Err("Backup contains duplicate service ids".to_string());
+        }
+    }
+
+    for order in &backup.orders {
+        validate_required(&order.id, "Order id")?;
+        validate_required(&order.customer_id, "Order customer id")?;
+        validate_required(&order.service_id, "Order service id")?;
+        if !order_ids.insert(order.id.as_str()) {
+            return Err("Backup contains duplicate order ids".to_string());
+        }
+        if !customer_ids.contains(order.customer_id.as_str()) {
+            return Err("Backup contains an order with a missing customer".to_string());
+        }
+        if !service_ids.contains(order.service_id.as_str()) {
+            return Err("Backup contains an order with a missing service".to_string());
+        }
+        if order.order_number <= 0 {
+            return Err("Order number must be greater than zero".to_string());
+        }
+        if order.quantity <= 0 {
+            return Err("Order quantity must be greater than zero".to_string());
+        }
+        if order.total_price < 0.0 {
+            return Err("Order total cannot be negative".to_string());
+        }
+        if order.deposit < 0.0 || order.deposit > order.total_price {
+            return Err("Order deposit is invalid".to_string());
+        }
+        order_totals.insert(order.id.as_str(), order.total_price);
+    }
+
+    for payment in &backup.payments {
+        validate_required(&payment.id, "Payment id")?;
+        validate_required(&payment.order_id, "Payment order id")?;
+        if !order_ids.contains(payment.order_id.as_str()) {
+            return Err("Backup contains a payment with a missing order".to_string());
+        }
+        if payment.amount <= 0.0 {
+            return Err("Payment amount must be greater than zero".to_string());
+        }
+        *payment_totals.entry(payment.order_id.as_str()).or_default() += payment.amount;
+    }
+
+    for (order_id, paid_amount) in payment_totals {
+        let total = order_totals
+            .get(order_id)
+            .ok_or_else(|| "Backup contains a payment with a missing order".to_string())?;
+        if paid_amount > *total {
+            return Err("Backup contains payments greater than an order total".to_string());
+        }
+    }
+
+    Ok(())
 }
 
 fn list_customers(conn: &Connection) -> Result<Vec<CustomerRecord>, String> {
@@ -609,7 +1031,9 @@ fn get_order_by_id(conn: &Connection, id: &str) -> Result<Option<OrderRecord>, S
 
 fn list_payments(conn: &Connection, order_id: &str) -> Result<Vec<PaymentRecord>, String> {
     let mut stmt = conn
-        .prepare("SELECT id, amount, paid_at, note FROM payments WHERE order_id = ?1 ORDER BY paid_at")
+        .prepare(
+            "SELECT id, amount, paid_at, note FROM payments WHERE order_id = ?1 ORDER BY paid_at",
+        )
         .map_err(|err| err.to_string())?;
     let rows = stmt
         .query_map(params![order_id], |row| {
@@ -700,6 +1124,40 @@ fn next_order_number(conn: &Connection) -> Result<i64, String> {
     Ok(current)
 }
 
+fn ensure_next_order_number(conn: &Connection) -> Result<(), String> {
+    let max_order_number: i64 = conn
+        .query_row(
+            "SELECT COALESCE(MAX(order_number), 1000) FROM orders",
+            [],
+            |row| row.get(0),
+        )
+        .map_err(|err| err.to_string())?;
+
+    let next = max_order_number + 1;
+    let existing = conn
+        .query_row(
+            "SELECT value FROM settings WHERE key = 'next_order_number'",
+            [],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(|err| err.to_string())?
+        .and_then(|value| value.parse::<i64>().ok())
+        .unwrap_or(0);
+
+    if existing < next {
+        conn.execute(
+            "INSERT INTO settings (key, value, updated_at)
+             VALUES ('next_order_number', ?1, datetime('now'))
+             ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')",
+            params![next.to_string()],
+        )
+        .map_err(|err| err.to_string())?;
+    }
+
+    Ok(())
+}
+
 fn paid_amount_for_order(conn: &Connection, order_id: &str) -> Result<f64, String> {
     conn.query_row(
         "SELECT COALESCE(SUM(amount), 0) FROM payments WHERE order_id = ?1",
@@ -707,6 +1165,18 @@ fn paid_amount_for_order(conn: &Connection, order_id: &str) -> Result<f64, Strin
         |row| row.get(0),
     )
     .map_err(|err| err.to_string())
+}
+
+fn current_timestamp() -> String {
+    chrono_like_now()
+}
+
+fn chrono_like_now() -> String {
+    let seconds = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or_default();
+    format!("{seconds}")
 }
 
 fn collect_rows<T>(

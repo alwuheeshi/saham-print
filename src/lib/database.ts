@@ -92,6 +92,62 @@ export interface DbPaymentInput {
   note?: string | null;
 }
 
+export interface DbBackupData {
+  formatVersion: number;
+  appVersion: string;
+  exportedAt: string;
+  settings: Array<{
+    key: string;
+    value: string;
+    updatedAt: string;
+  }>;
+  customers: Array<{
+    id: string;
+    name: string;
+    phone: string;
+    business?: string | null;
+    address?: string | null;
+    notes?: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  services: Array<{
+    id: string;
+    label: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  orders: Array<{
+    id: string;
+    orderNumber: number;
+    customerId: string;
+    customerNameSnapshot: string;
+    customerPhoneSnapshot: string;
+    serviceId: string;
+    description: string;
+    dimensions?: string | null;
+    quantity: number;
+    notes?: string | null;
+    assignedDesigner?: string | null;
+    assignedPrinter?: string | null;
+    assignedInstaller?: string | null;
+    totalPrice: number;
+    deposit: number;
+    deliveryDate: string;
+    status: OrderStatus;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  payments: Array<{
+    id: string;
+    orderId: string;
+    amount: number;
+    paidAt: string;
+    note?: string | null;
+    createdAt: string;
+  }>;
+}
+
 export function getDatabaseStatus(): Promise<DatabaseStatus> {
   return invoke<DatabaseStatus>('database_status');
 }
@@ -150,4 +206,12 @@ export function deleteDbOrder(id: string): Promise<void> {
 
 export function addDbPayment(orderId: string, input: DbPaymentInput): Promise<DbOrder> {
   return invoke<DbOrder>('db_add_payment', { orderId, input });
+}
+
+export function exportDbBackup(): Promise<DbBackupData> {
+  return invoke<DbBackupData>('db_export_backup');
+}
+
+export function importDbBackup(backup: DbBackupData): Promise<DatabaseStatus> {
+  return invoke<DatabaseStatus>('db_import_backup', { backup });
 }

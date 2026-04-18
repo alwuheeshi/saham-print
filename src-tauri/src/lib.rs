@@ -24,7 +24,9 @@ pub fn run() {
             db::db_add_order,
             db::db_update_order,
             db::db_delete_order,
-            db::db_add_payment
+            db::db_add_payment,
+            db::db_export_backup,
+            db::db_import_backup
         ])
         .run(tauri::generate_context!())
         .expect("error while running Saham Print");

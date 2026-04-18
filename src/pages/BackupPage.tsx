@@ -1,14 +1,52 @@
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Download, Upload } from 'lucide-react';
+import { exportDbBackup, importDbBackup, type DbBackupData } from '@/lib/database';
 
 export default function BackupPage() {
-  const handleExport = () => {
-    toast.info('سيتم إضافة نسخ احتياطي لقاعدة SQLite في خطوة النسخ الاحتياطي.');
+  const handleExport = async () => {
+    try {
+      const backup = await exportDbBackup();
+      const data = JSON.stringify(backup, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `saham-print-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('تم تصدير النسخة الاحتياطية');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'تعذر تصدير النسخة الاحتياطية');
+    }
   };
 
   const handleImport = () => {
-    toast.info('سيتم إضافة استعادة نسخ SQLite الاحتياطية في خطوة النسخ الاحتياطي.');
+    if (!confirm('سيتم استبدال كل البيانات الحالية بالنسخة الاحتياطية. هل تريد المتابعة؟')) {
+      return;
+    }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        try {
+          const backup = JSON.parse(String(ev.target?.result)) as DbBackupData;
+          await importDbBackup(backup);
+          toast.success('تم استعادة النسخة الاحتياطية. سيتم تحديث الصفحة.');
+          setTimeout(() => window.location.reload(), 800);
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'ملف النسخة الاحتياطية غير صالح');
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
   };
 
   return (
@@ -18,7 +56,7 @@ export default function BackupPage() {
         <div>
           <h3 className="font-semibold mb-2">تصدير نسخة احتياطية</h3>
           <p className="text-sm text-muted-foreground mb-3">تصدير جميع بيانات النظام (طلبات، عملاء، خدمات) كملف JSON</p>
-          <Button onClick={handleExport} className="w-full">
+          <Button onClick={() => handleExport()} className="w-full">
             <Download className="w-4 h-4 ml-2" />تصدير النسخة الاحتياطية
           </Button>
         </div>
