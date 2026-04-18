@@ -1,9 +1,23 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { Download, Upload } from 'lucide-react';
 import { exportDbBackup, importDbBackup, type DbBackupData } from '@/lib/database';
 
 export default function BackupPage() {
+  const [importing, setImporting] = useState(false);
+
   const handleExport = async () => {
     try {
       const backup = await exportDbBackup();
@@ -22,10 +36,6 @@ export default function BackupPage() {
   };
 
   const handleImport = () => {
-    if (!confirm('سيتم استبدال كل البيانات الحالية بالنسخة الاحتياطية. هل تريد المتابعة؟')) {
-      return;
-    }
-
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json,application/json';
@@ -35,6 +45,7 @@ export default function BackupPage() {
 
       const reader = new FileReader();
       reader.onload = async (ev) => {
+        setImporting(true);
         try {
           const backup = JSON.parse(String(ev.target?.result)) as DbBackupData;
           await importDbBackup(backup);
@@ -42,6 +53,8 @@ export default function BackupPage() {
           setTimeout(() => window.location.reload(), 800);
         } catch (error) {
           toast.error(error instanceof Error ? error.message : 'ملف النسخة الاحتياطية غير صالح');
+        } finally {
+          setImporting(false);
         }
       };
       reader.readAsText(file);
@@ -63,9 +76,26 @@ export default function BackupPage() {
         <div className="border-t pt-6">
           <h3 className="font-semibold mb-2">استعادة نسخة احتياطية</h3>
           <p className="text-sm text-muted-foreground mb-3">استيراد ملف نسخة احتياطية سابقة. سيتم استبدال البيانات الحالية.</p>
-          <Button variant="outline" onClick={handleImport} className="w-full">
-            <Upload className="w-4 h-4 ml-2" />استيراد نسخة احتياطية
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" className="w-full" disabled={importing}>
+                <Upload className="w-4 h-4 ml-2" />
+                {importing ? 'جاري الاستيراد...' : 'استيراد نسخة احتياطية'}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>استعادة نسخة احتياطية</AlertDialogTitle>
+                <AlertDialogDescription>
+                  سيتم استبدال كل البيانات الحالية بالنسخة الاحتياطية. هل تريد المتابعة؟
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                <AlertDialogAction onClick={handleImport}>متابعة</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </div>

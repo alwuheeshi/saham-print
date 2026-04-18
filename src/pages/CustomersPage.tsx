@@ -6,6 +6,17 @@ import { Order } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Trash2, Edit, Eye, Search, User } from 'lucide-react';
@@ -18,6 +29,7 @@ export default function CustomersPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null);
   const [allOrders, setAllOrders] = useState<Order[]>([]);
+  const [deletingCustomerId, setDeletingCustomerId] = useState<string | null>(null);
 
   const reload = async () => {
     const [customers, orders] = await Promise.all([getCustomers(), getOrders(), getServices()])
@@ -39,10 +51,16 @@ export default function CustomersPage() {
     allOrders.filter(o => o.customerName === name && o.phone === phone);
 
   const handleDelete = async (id: string) => {
-    if (confirm('هل أنت متأكد من حذف هذا العميل؟')) {
+    setDeletingCustomerId(id);
+    try {
       await deleteCustomer(id);
       await reload();
       toast.success('تم حذف العميل');
+    } catch (error) {
+      console.error(error);
+      toast.error('تعذر حذف العميل. إذا كان لديه طلبات، احذف الطلبات أولاً.');
+    } finally {
+      setDeletingCustomerId(null);
     }
   };
 
@@ -107,9 +125,35 @@ export default function CustomersPage() {
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditCustomer({ ...c })}>
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(c.id)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
+                              disabled={deletingCustomerId === c.id}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>حذف العميل</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                هل أنت متأكد من حذف العميل {c.name}؟ لا يمكن حذف عميل لديه طلبات مرتبطة.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                onClick={() => handleDelete(c.id)}
+                              >
+                                حذف
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </td>
                   </tr>
