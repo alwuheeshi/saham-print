@@ -2,11 +2,22 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getOrders, deleteOrder, updateOrder } from '@/lib/store';
 import { Order, STATUS_LABELS, PAYMENT_STATUS_LABELS, OrderStatus } from '@/lib/types';
-import { getServiceLabel } from '@/lib/services';
+import { getServiceLabel, getServices } from '@/lib/services';
 import { OrderStatusBadge, PaymentStatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Trash2, Edit, Eye, FileSpreadsheet, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
@@ -15,21 +26,33 @@ export default function OrdersList() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
 
-  const reload = () => setOrders(getOrders());
-  useEffect(reload, []);
+  const reload = async () => {
+    await getServices();
+    setOrders(await getOrders());
+  };
+  useEffect(() => {
+    reload().catch(console.error);
+  }, []);
 
-  const handleDelete = (id: string) => {
-    if (confirm('هل أنت متأكد من حذف هذا الطلب؟')) {
-      deleteOrder(id);
-      reload();
+  const handleDelete = async (id: string) => {
+    setDeletingOrderId(id);
+    try {
+      await deleteOrder(id);
+      await reload();
       toast.success('تم حذف الطلب');
+    } catch (error) {
+      console.error(error);
+      toast.error('تعذر حذف الطلب');
+    } finally {
+      setDeletingOrderId(null);
     }
   };
 
-  const handleStatusChange = (id: string, status: OrderStatus) => {
-    updateOrder(id, { status });
-    reload();
+  const handleStatusChange = async (id: string, status: OrderStatus) => {
+    await updateOrder(id, { status });
+    await reload();
   };
 
   const filtered = orders.filter(o => {
@@ -150,9 +173,35 @@ export default function OrdersList() {
                       <Link to={`/orders/${order.id}/edit`}>
                         <Button variant="ghost" size="icon" className="h-8 w-8"><Edit className="w-4 h-4" /></Button>
                       </Link>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(order.id)}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive"
+                            disabled={deletingOrderId === order.id}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>حذف الطلب</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              هل أنت متأكد من حذف الطلب رقم {order.orderNumber || order.id}؟ سيتم حذف كل الدفعات المرتبطة به أيضاً.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                            <AlertDialogAction
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              onClick={() => handleDelete(order.id)}
+                            >
+                              حذف
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </td>
                 </tr>

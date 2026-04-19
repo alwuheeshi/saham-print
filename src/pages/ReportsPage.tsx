@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { getOrders } from '@/lib/store';
 import { Order, STATUS_LABELS } from '@/lib/types';
-import { getServiceLabel } from '@/lib/services';
+import { getServiceLabel, getServices } from '@/lib/services';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -14,7 +14,7 @@ import {
 import { ar } from 'date-fns/locale';
 import {
   CalendarIcon, ClipboardList, DollarSign, TrendingUp, Users,
-  BarChart3, Printer
+  BarChart3, Printer, type LucideIcon
 } from 'lucide-react';
 
 type Period = 'today' | 'week' | 'month' | 'quarter' | 'half' | 'year' | 'custom';
@@ -59,7 +59,11 @@ export default function ReportsPage() {
   const [customFrom, setCustomFrom] = useState<Date | undefined>();
   const [customTo, setCustomTo] = useState<Date | undefined>();
 
-  useEffect(() => { setAllOrders(getOrders()); }, []);
+  useEffect(() => {
+    Promise.all([getServices(), getOrders()])
+      .then(([, orders]) => setAllOrders(orders))
+      .catch(console.error);
+  }, []);
 
   const filtered = useMemo(() => {
     const range = getDateRange(period, customFrom, customTo);
@@ -270,7 +274,7 @@ export default function ReportsPage() {
   );
 }
 
-function SummaryCard({ icon: Icon, label, value, color }: { icon: any; label: string; value: string; color: string }) {
+function SummaryCard({ icon: Icon, label, value, color }: { icon: LucideIcon; label: string; value: string; color: string }) {
   return (
     <div className="bg-card rounded-lg border p-4 shadow-sm">
       <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 ${color}`}>

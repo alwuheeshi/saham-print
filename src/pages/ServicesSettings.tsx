@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getServices, saveServices, CustomService } from '@/lib/services';
+import { addService, getServices, removeService, renameService, CustomService } from '@/lib/services';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Trash2, Plus, ArrowRight } from 'lucide-react';
@@ -11,39 +11,46 @@ export default function ServicesSettings() {
   const [newLabel, setNewLabel] = useState('');
 
   useEffect(() => {
-    setServices(getServices());
+    getServices().then(setServices).catch(console.error);
   }, []);
 
-  const handleAdd = () => {
+  const reload = async () => setServices(await getServices());
+
+  const handleAdd = async () => {
     const label = newLabel.trim();
     if (!label) return;
     if (services.some(s => s.label === label)) {
       toast.error('هذه الخدمة موجودة بالفعل');
       return;
     }
-    const id = Date.now().toString(36) + Math.random().toString(36).substr(2, 4);
-    const updated = [...services, { id, label }];
-    setServices(updated);
-    saveServices(updated);
+    await addService(label);
+    await reload();
     setNewLabel('');
     toast.success('تمت إضافة الخدمة');
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (services.length <= 1) {
       toast.error('يجب أن تبقى خدمة واحدة على الأقل');
       return;
     }
-    const updated = services.filter(s => s.id !== id);
-    setServices(updated);
-    saveServices(updated);
+    await removeService(id);
+    await reload();
     toast.success('تم حذف الخدمة');
   };
 
   const handleRename = (id: string, newName: string) => {
-    const updated = services.map(s => s.id === id ? { ...s, label: newName } : s);
-    setServices(updated);
-    saveServices(updated);
+    setServices(services.map(s => s.id === id ? { ...s, label: newName } : s));
+  };
+
+  const handleRenameCommit = async (id: string, newName: string) => {
+    const label = newName.trim();
+    if (!label) {
+      await reload();
+      return;
+    }
+    await renameService(id, label);
+    await reload();
   };
 
   return (
@@ -61,14 +68,14 @@ export default function ServicesSettings() {
             <Input
               value={service.label}
               onChange={e => handleRename(service.id, e.target.value)}
-              onBlur={() => saveServices(services)}
+              onBlur={e => handleRenameCommit(service.id, e.target.value).catch(console.error)}
               className="flex-1"
             />
             <Button
               variant="ghost"
               size="icon"
               className="text-destructive shrink-0"
-              onClick={() => handleDelete(service.id)}
+              onClick={() => handleDelete(service.id).catch(console.error)}
             >
               <Trash2 className="w-4 h-4" />
             </Button>
@@ -80,10 +87,12 @@ export default function ServicesSettings() {
             placeholder="اسم الخدمة الجديدة..."
             value={newLabel}
             onChange={e => setNewLabel(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleAdd()}
-            className="flex-1"
-          />
-          <Button onClick={handleAdd} size="icon" className="shrink-0">
+              onKeyDown={e => {
+                if (e.key === 'Enter') handleAdd().catch(console.error);
+              }}
+              className="flex-1"
+            />
+          <Button onClick={() => handleAdd().catch(console.error)} size="icon" className="shrink-0">
             <Plus className="w-4 h-4" />
           </Button>
         </div>

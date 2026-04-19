@@ -2,8 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap');
-
 @layer base {
   :root {
     --background: 30 25% 97%;
@@ -69,7 +67,7 @@
 
 @layer utilities {
   .font-cairo {
-    font-family: 'Cairo', sans-serif;
+    font-family: "Geeza Pro", "Noto Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
   }
 }
 

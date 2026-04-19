@@ -10,7 +10,12 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+src-tauri/target
+src-tauri/gen
 *.local
+package-lock.json
+bun.lock
+bun.lockb
 
 # Editor directories and files
 .vscode/*

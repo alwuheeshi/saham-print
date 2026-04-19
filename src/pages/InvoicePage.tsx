@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { getOrder } from '@/lib/store';
 import { Order } from '@/lib/types';
-import { getServiceLabel } from '@/lib/services';
+import { getServiceLabel, getServices } from '@/lib/services';
 import { Button } from '@/components/ui/button';
 import { Printer, ArrowRight } from 'lucide-react';
 
@@ -153,10 +153,14 @@ export default function InvoicePage() {
   const type = (searchParams.get('type') as 'preliminary' | 'final') || 'final';
 
   useEffect(() => {
-    const o = getOrder(id!);
-    if (o) setOrder(o);
-    else navigate('/orders');
-  }, [id]);
+    const load = async () => {
+      await getServices();
+      const o = await getOrder(id!);
+      if (o) setOrder(o);
+      else navigate('/orders');
+    };
+    load().catch(console.error);
+  }, [id, navigate]);
 
   if (!order) return null;
 

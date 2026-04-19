@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getOrders } from '@/lib/store';
 import { Order } from '@/lib/types';
-import { getServiceLabel } from '@/lib/services';
+import { getServiceLabel, getServices } from '@/lib/services';
 import { PaymentStatusBadge } from '@/components/StatusBadge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,9 @@ export default function Debts() {
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    setOrders(getOrders().filter(o => o.remainingAmount > 0));
+    Promise.all([getServices(), getOrders()])
+      .then(([, orders]) => setOrders(orders.filter(o => o.remainingAmount > 0)))
+      .catch(console.error);
   }, []);
 
   const filtered = orders.filter(o =>
